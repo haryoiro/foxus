@@ -12,8 +12,8 @@ import Foxus
 // MARK: - 引数パース
 
 var dryRun = false
-var cwdOverride: String? = nil
-var callerOverride: String? = nil
+var cwdOverride: String?
+var callerOverride: String?
 
 var args = CommandLine.arguments.dropFirst()
 while !args.isEmpty {

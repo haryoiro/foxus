@@ -1,0 +1,16 @@
+[tools]
+# Swift は Xcode に含まれるものを使用
+lefthook = "latest"
+swiftlint = "latest"
+
+[tasks.lint]
+description = "Lint Swift code"
+run = "swiftlint lint"
+
+[tasks.test]
+description = "Run tests"
+run = "swift test"
+
+[tasks.build]
+description = "Build release"
+run = "swift build -c release"
