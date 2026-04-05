@@ -28,6 +28,50 @@ struct FocusStrategyResolverTests {
         #expect(strategy == .cmux(cwd: nil))
     }
 
+    // MARK: zellij
+
+    @Test("ZELLIJ環境変数があればzellij戦略")
+    func zellijStrategy() {
+        let strategy = FocusStrategyResolver.determine(
+            callerApp: nil,
+            cwd: "/project",
+            env: ["ZELLIJ": "0"]
+        )
+        #expect(strategy == .zellij(cwd: "/project"))
+    }
+
+    @Test("tmux > zellij の優先順位")
+    func tmuxBeforeZellij() {
+        let strategy = FocusStrategyResolver.determine(
+            callerApp: nil,
+            cwd: nil,
+            env: ["TMUX": "/tmp/tmux.sock,1,0", "ZELLIJ": "0"]
+        )
+        #expect(strategy == .tmux(cwd: nil))
+    }
+
+    // MARK: wezterm
+
+    @Test("WEZTERM_PANE環境変数があればwezterm戦略")
+    func weztermStrategy() {
+        let strategy = FocusStrategyResolver.determine(
+            callerApp: nil,
+            cwd: "/project",
+            env: ["WEZTERM_PANE": "3"]
+        )
+        #expect(strategy == .wezterm(cwd: "/project"))
+    }
+
+    @Test("zellij > wezterm の優先順位")
+    func zellijBeforeWezterm() {
+        let strategy = FocusStrategyResolver.determine(
+            callerApp: nil,
+            cwd: nil,
+            env: ["ZELLIJ": "0", "WEZTERM_PANE": "3"]
+        )
+        #expect(strategy == .zellij(cwd: nil))
+    }
+
     // MARK: tmux
 
     @Test("TMUX環境変数があればtmux戦略")

@@ -28,6 +28,10 @@ public enum Foxus {
             return CmuxWindowDetector.focusCurrentWindow(cwd: cwd)
         case .tmux(let cwd):
             return TmuxWindowDetector.focusCurrentWindow(cwd: cwd)
+        case .zellij(let cwd):
+            return ZellijWindowDetector.focusCurrentWindow(cwd: cwd)
+        case .wezterm(let cwd):
+            return WeztermWindowDetector.focusCurrentWindow(cwd: cwd)
         case .vscode(let cwd):
             return VSCodeWindowDetector.focusCurrentWindow(cwd: cwd)
         case .intellij(let cwd):

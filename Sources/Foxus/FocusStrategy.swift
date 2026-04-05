@@ -9,6 +9,10 @@ public enum FocusStrategy: Equatable {
     case cmux(cwd: String?)
     /// tmux環境: 実ターミナルにフォーカス + ペイン復元
     case tmux(cwd: String?)
+    /// zellij環境: 実ターミナルにフォーカス + ペイン復元
+    case zellij(cwd: String?)
+    /// WezTerm環境: アプリにフォーカス + ペイン復元（Unix socket経由）
+    case wezterm(cwd: String?)
     /// VSCode: 専用ウィンドウ検出
     case vscode(cwd: String?)
     /// IntelliJ/JetBrains: 専用ウィンドウ検出
@@ -46,23 +50,33 @@ public enum FocusStrategyResolver {
             return .tmux(cwd: cwd)
         }
 
-        // 3. VSCode
+        // 3. zellij
+        if env["ZELLIJ"] != nil {
+            return .zellij(cwd: cwd)
+        }
+
+        // 4. WezTerm
+        if env["WEZTERM_PANE"] != nil {
+            return .wezterm(cwd: cwd)
+        }
+
+        // 5. VSCode
         if isVSCodeEnvironment(callerApp: callerApp, env: env) {
             return .vscode(cwd: cwd)
         }
 
-        // 4. IntelliJ/JetBrains
+        // 6. IntelliJ/JetBrains
         if isIntelliJEnvironment(callerApp: callerApp, env: env) {
             return .intellij(cwd: cwd)
         }
 
-        // 5. 汎用（callerAppからバンドルIDを解決）
+        // 7. 汎用（callerAppからバンドルIDを解決）
         let bundleId = resolveBundleId(callerApp)
         if bundleId != nil || cwd != nil {
             return .generic(bundleId: bundleId, cwd: cwd)
         }
 
-        // 6. フォールバック
+        // 8. フォールバック
         return .fallback
     }
 
