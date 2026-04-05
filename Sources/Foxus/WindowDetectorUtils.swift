@@ -8,6 +8,22 @@ import Foundation
 // 公開APIではSpace間のウィンドウ移動ができないため、これに頼っている。
 // 将来のmacOSで動作しなくなる可能性がある。
 
+// MARK: - 将来の改善候補
+//
+// [SkyLight SLS API について]
+// yabai は SkyLight.framework のプライベートシンボル（SLSCopyWindowsWithOptionsAndTags など）を使い、
+// 複数Space のウィンドウをバッチ取得している。現在の AX API（kAXWindowsAttribute）より大幅に速く、
+// Accessibility権限も不要。
+// ただし macOS メジャーアップデートでシンボル名が変わることがあり（yabai も毎バージョン修正が入る）、
+// 常駐してウィンドウを大量管理するアプリ（notiro など）ができた時点で検討する。
+// 参考: https://github.com/koekeishiya/yabai/blob/master/src/space.c
+//
+// [AXUIElement → CGWindowID キャッシュについて]
+// 現在は focusWindowInApp() のたびに kAXWindowsAttribute でウィンドウを全列挙している。
+// AXUIElement から _AXUIElementGetWindow で取得した CGWindowID をメモリ内辞書でキャッシュすれば
+// 再列挙を省ける。ただし pyokotify は短命プロセスなので恩恵が薄い。
+// notiro のような常駐アプリで複数回フォーカスが走る場合に有効。
+
 private typealias CGSConnectionID = UInt32
 private typealias CGSSpaceID = UInt64
 
