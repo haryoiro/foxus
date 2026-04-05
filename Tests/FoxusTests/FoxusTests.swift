@@ -72,6 +72,28 @@ struct FocusStrategyResolverTests {
         #expect(strategy == .zellij(cwd: nil))
     }
 
+    // MARK: kitty
+
+    @Test("KITTY_WINDOW_ID環境変数があればkitty戦略")
+    func kittyStrategy() {
+        let strategy = FocusStrategyResolver.determine(
+            callerApp: nil,
+            cwd: "/project",
+            env: ["KITTY_WINDOW_ID": "5"]
+        )
+        #expect(strategy == .kitty(cwd: "/project"))
+    }
+
+    @Test("wezterm > kitty の優先順位")
+    func weztermBeforeKitty() {
+        let strategy = FocusStrategyResolver.determine(
+            callerApp: nil,
+            cwd: nil,
+            env: ["WEZTERM_PANE": "3", "KITTY_WINDOW_ID": "5"]
+        )
+        #expect(strategy == .wezterm(cwd: nil))
+    }
+
     // MARK: tmux
 
     @Test("TMUX環境変数があればtmux戦略")

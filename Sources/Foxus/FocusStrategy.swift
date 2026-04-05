@@ -13,6 +13,8 @@ public enum FocusStrategy: Equatable {
     case zellij(cwd: String?)
     /// WezTerm環境: アプリにフォーカス + ペイン復元（Unix socket経由）
     case wezterm(cwd: String?)
+    /// kitty環境: アプリにフォーカス + ウィンドウ復元（kitten @ 経由）
+    case kitty(cwd: String?)
     /// VSCode: 専用ウィンドウ検出
     case vscode(cwd: String?)
     /// IntelliJ/JetBrains: 専用ウィンドウ検出
@@ -60,23 +62,28 @@ public enum FocusStrategyResolver {
             return .wezterm(cwd: cwd)
         }
 
-        // 5. VSCode
+        // 5. kitty
+        if env["KITTY_WINDOW_ID"] != nil {
+            return .kitty(cwd: cwd)
+        }
+
+        // 6. VSCode
         if isVSCodeEnvironment(callerApp: callerApp, env: env) {
             return .vscode(cwd: cwd)
         }
 
-        // 6. IntelliJ/JetBrains
+        // 7. IntelliJ/JetBrains
         if isIntelliJEnvironment(callerApp: callerApp, env: env) {
             return .intellij(cwd: cwd)
         }
 
-        // 7. 汎用（callerAppからバンドルIDを解決）
+        // 8. 汎用（callerAppからバンドルIDを解決）
         let bundleId = resolveBundleId(callerApp)
         if bundleId != nil || cwd != nil {
             return .generic(bundleId: bundleId, cwd: cwd)
         }
 
-        // 8. フォールバック
+        // 9. フォールバック
         return .fallback
     }
 
