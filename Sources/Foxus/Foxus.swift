@@ -7,14 +7,15 @@ import Foundation
 ///
 /// 使い方:
 /// ```swift
-/// // 戦略を指定して実行
-/// let ok = FocusEngine.execute(strategy: .vscode(cwd: "/path/to/project"))
+/// // ワンライナー（戦略決定→実行まで全部やる）
+/// let result = Foxus.focus(callerApp: "ghostty", cwd: "/path/to/project")
+/// if !result.succeeded { /* 独自フォールバック */ }
 ///
-/// // 環境から自動決定して実行
-/// let result = FocusEngine.focus(callerApp: "code", cwd: "/path/to/project")
-/// if !result.succeeded { /* フォールバック処理 */ }
+/// // 戦略を自分で決めて実行
+/// let strategy = FocusStrategyResolver.determine(callerApp: ..., cwd: ..., env: env)
+/// Foxus.execute(strategy: strategy)
 /// ```
-public enum FocusEngine {
+public enum Foxus {
 
     /// 戦略を指定してフォーカスを実行
     ///
@@ -96,7 +97,7 @@ public enum FocusEngine {
 
 // MARK: - FocusResult
 
-/// `FocusEngine.focus(callerApp:cwd:env:)` の実行結果
+/// `Foxus.focus(callerApp:cwd:env:)` の実行結果
 public struct FocusResult {
     /// 採用された戦略
     public let strategy: FocusStrategy
