@@ -8,7 +8,7 @@ tmux / zellij / wezterm / kitty などのマルチプレクサのペイン復元
 
 ```swift
 // Package.swift
-.package(url: "https://github.com/haryoiro/foxus", from: "0.0.4")
+.package(url: "https://github.com/haryoiro/foxus", from: "x.x.x")
 ```
 
 ## 使い方
