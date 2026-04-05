@@ -12,8 +12,12 @@ public enum ProcessDetector {
     private static var bundleIdToTermProgram: [String: String] { BundleIDRegistry.allTerminalApps }
 
     /// プロセスツリーを遡ってターミナルアプリを検出
+    ///
+    /// - Parameter env: 環境変数辞書（デフォルト: ProcessInfo.processInfo.environment）
     /// - Returns: 既知アプリのTERM_PROGRAM名、または未知アプリのバンドルID
-    public static func detectTerminalApp() -> String? {
+    public static func detectTerminalApp(
+        env: [String: String] = ProcessInfo.processInfo.environment
+    ) -> String? {
         var currentPid = getpid()
         var visitedPids: Set<pid_t> = []
 
@@ -34,7 +38,7 @@ public enum ProcessDetector {
         }
 
         // TERM_PROGRAM環境変数をフォールバックとして使用
-        let termProgram = ProcessInfo.processInfo.environment["TERM_PROGRAM"]
+        let termProgram = env["TERM_PROGRAM"]
 
         // tmux環境の場合、クライアントPIDから実際のターミナルアプリを検出
         if termProgram == "tmux" {
@@ -44,8 +48,7 @@ public enum ProcessDetector {
         }
 
         // cmuxはTERM_PROGRAM=ghosttyを設定するが、CMUX_WORKSPACE_IDで区別可能
-        if termProgram == "ghostty"
-            && ProcessInfo.processInfo.environment["CMUX_WORKSPACE_ID"] != nil {
+        if termProgram == "ghostty" && env["CMUX_WORKSPACE_ID"] != nil {
             return "cmux"
         }
 
