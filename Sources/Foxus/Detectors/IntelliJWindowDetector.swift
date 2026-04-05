@@ -16,7 +16,7 @@ public enum IntelliJWindowDetector {
         if let cwd = cwd {
             let projectName = (cwd as NSString).lastPathComponent
             if !projectName.isEmpty {
-                if WindowDetectorUtils.focusWindowByTitle(projectName, bundleIds: bundleIds) {
+                if WindowFocus.focusWindowByTitle(projectName, bundleIds: bundleIds) {
                     return true
                 }
             }
@@ -28,7 +28,7 @@ public enum IntelliJWindowDetector {
             if let parentCwd = ProcessUtils.getParentCwd() {
                 let projectName = (parentCwd as NSString).lastPathComponent
                 let apps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId)
-                for app in apps where WindowDetectorUtils.focusWindowInApp(app, matchingTitle: projectName) {
+                for app in apps where WindowFocus.focusWindowInApp(app, matchingTitle: projectName) {
                     return true
                 }
             }
@@ -44,7 +44,7 @@ public enum IntelliJWindowDetector {
         if let parentCwd = ProcessUtils.getParentCwd() {
             let projectName = (parentCwd as NSString).lastPathComponent
             if !projectName.isEmpty {
-                if WindowDetectorUtils.focusWindowByTitle(projectName, bundleIds: bundleIds) {
+                if WindowFocus.focusWindowByTitle(projectName, bundleIds: bundleIds) {
                     return true
                 }
             }
@@ -52,12 +52,12 @@ public enum IntelliJWindowDetector {
 
         // 方法4: TTYから特定
         if let windowTitle = ProcessUtils.detectWindowTitleFromTty() {
-            if WindowDetectorUtils.focusWindowByTitle(windowTitle, bundleIds: bundleIds) {
+            if WindowFocus.focusWindowByTitle(windowTitle, bundleIds: bundleIds) {
                 return true
             }
         }
 
         // 方法5: フォールバック - JetBrains IDEアプリにフォーカス
-        return WindowDetectorUtils.focusAnyApp(bundleIds: bundleIds)
+        return WindowFocus.focusAnyApp(bundleIds: bundleIds)
     }
 }

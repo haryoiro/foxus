@@ -22,7 +22,7 @@ public enum WeztermWindowDetector {
         let apps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleIds[0])
         if let app = apps.first {
             if let cwd = cwd {
-                _ = WindowDetectorUtils.focusWindowInApp(app, matchingCwd: cwd)
+                _ = WindowFocus.focusWindowInApp(app, matchingCwd: cwd)
             }
             app.activate(options: [.activateIgnoringOtherApps])
         } else {

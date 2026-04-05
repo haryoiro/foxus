@@ -23,7 +23,7 @@ public enum VSCodeWindowDetector {
         if let pluginPwd = detectPluginPwdFromIpcHandle() {
             let projectName = (pluginPwd as NSString).lastPathComponent
             if !projectName.isEmpty,
-               WindowDetectorUtils.focusWindowByTitle(projectName, bundleIds: bundleIds) {
+               WindowFocus.focusWindowByTitle(projectName, bundleIds: bundleIds) {
                 return true
             }
         }
@@ -32,7 +32,7 @@ public enum VSCodeWindowDetector {
         if let cwd = cwd {
             let projectName = (cwd as NSString).lastPathComponent
             if !projectName.isEmpty,
-               WindowDetectorUtils.focusWindowByTitle(projectName, bundleIds: bundleIds) {
+               WindowFocus.focusWindowByTitle(projectName, bundleIds: bundleIds) {
                 return true
             }
         }
@@ -40,19 +40,19 @@ public enum VSCodeWindowDetector {
         // 方法3: git worktree 内の場合、親リポジトリ名でマッチ
         // 例: /path/to/myrepo/.worktrees/feature/branch → "myrepo" でウィンドウを検索
         if let cwd = cwd, let parentRepoName = extractWorktreeParentName(from: cwd) {
-            if WindowDetectorUtils.focusWindowByTitle(parentRepoName, bundleIds: bundleIds) {
+            if WindowFocus.focusWindowByTitle(parentRepoName, bundleIds: bundleIds) {
                 return true
             }
         }
 
         // 方法4: TTY からシェルの cwd を取得してウィンドウタイトルを推測
         if let windowTitle = ProcessUtils.detectWindowTitleFromTty(),
-           WindowDetectorUtils.focusWindowByTitle(windowTitle, bundleIds: bundleIds) {
+           WindowFocus.focusWindowByTitle(windowTitle, bundleIds: bundleIds) {
             return true
         }
 
         // 方法5: フォールバック — ウィンドウ特定を諦め、アプリ全体をアクティブ化
-        return WindowDetectorUtils.focusAnyApp(bundleIds: bundleIds)
+        return WindowFocus.focusAnyApp(bundleIds: bundleIds)
     }
 
     /// git worktree パスから親リポジトリ名を抽出する。

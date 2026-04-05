@@ -33,7 +33,7 @@ public enum CmuxWindowDetector {
             if let app = apps.first {
                 // cwdでウィンドウマッチを試みる（フルパス → フォルダ名の順）
                 if let cwd = cwd,
-                    WindowDetectorUtils.focusWindowInApp(app, matchingCwd: cwd) {
+                    WindowFocus.focusWindowInApp(app, matchingCwd: cwd) {
                     focused = true
                     break
                 }

@@ -80,7 +80,7 @@ public enum Foxus {
         if let bundleId = bundleId {
             let apps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId)
             if let cwd = cwd {
-                for app in apps where WindowDetectorUtils.focusWindowInApp(app, matchingCwd: cwd) {
+                for app in apps where WindowFocus.focusWindowInApp(app, matchingCwd: cwd) {
                     return true
                 }
             }
@@ -96,7 +96,7 @@ public enum Foxus {
             let folderName = (cwd as NSString).lastPathComponent
             let allBundleIds = Array(BundleIDRegistry.terminalApps.keys)
             if !folderName.isEmpty,
-               WindowDetectorUtils.focusWindowByTitle(folderName, bundleIds: allBundleIds) {
+               WindowFocus.focusWindowByTitle(folderName, bundleIds: allBundleIds) {
                 return true
             }
         }

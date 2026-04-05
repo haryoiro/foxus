@@ -24,7 +24,7 @@ public enum KittyWindowDetector {
         let apps = NSRunningApplication.runningApplications(withBundleIdentifier: "net.kovidgoyal.kitty")
         if let app = apps.first {
             if let cwd = cwd {
-                _ = WindowDetectorUtils.focusWindowInApp(app, matchingCwd: cwd)
+                _ = WindowFocus.focusWindowInApp(app, matchingCwd: cwd)
             }
             app.activate(options: [.activateIgnoringOtherApps])
         } else {

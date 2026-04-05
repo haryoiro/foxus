@@ -43,7 +43,7 @@ private func _AXUIElementGetWindow(_ element: AXUIElement, _ outWindow: UnsafeMu
 ///
 /// Space移動・ウィンドウフォーカスなど、AppKit/AXに関わる操作を担う。
 /// プロセス/システム操作は `ProcessUtils` を参照。
-public enum WindowDetectorUtils {
+public enum WindowFocus {
 
     // MARK: - Space移動（CGSプライベートAPI）
 

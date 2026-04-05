@@ -89,7 +89,7 @@ public enum TmuxWindowDetector {
             if let app = apps.first {
                 // cwdでウィンドウマッチを試みる（フルパス → フォルダ名の順）
                 if let cwd = cwd,
-                    WindowDetectorUtils.focusWindowInApp(app, matchingCwd: cwd) {
+                    WindowFocus.focusWindowInApp(app, matchingCwd: cwd) {
                     restoreTmuxPane()
                     return true
                 }
@@ -106,7 +106,7 @@ public enum TmuxWindowDetector {
             let folderName = (cwd as NSString).lastPathComponent
             if !folderName.isEmpty {
                 let allBundleIds = Array(BundleIDRegistry.terminalApps.keys)
-                if WindowDetectorUtils.focusWindowByTitle(folderName, bundleIds: allBundleIds) {
+                if WindowFocus.focusWindowByTitle(folderName, bundleIds: allBundleIds) {
                     restoreTmuxPane()
                     return true
                 }
