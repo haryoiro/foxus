@@ -33,18 +33,9 @@ while !args.isEmpty {
 // MARK: - 検出
 
 let env = ProcessInfo.processInfo.environment
-let detectedCaller = ProcessDetector.detectTerminalApp(env: env)
-let callerApp = callerOverride ?? detectedCaller
-
-let detectedCwd: String? = cwdOverride
-    ?? ProcessUtils.getCwdFromCurrentTty()
-    ?? ProcessUtils.getParentCwd()
-
-let strategy = FocusStrategyResolver.determine(
-    callerApp: callerApp,
-    cwd: detectedCwd,
-    env: env
-)
+let callerApp = callerOverride ?? ProcessDetector.detectTerminalApp(env: env)
+let cwd = cwdOverride ?? ProcessUtils.getCwdFromCurrentTty() ?? ProcessUtils.getParentCwd()
+let strategy = FocusStrategyResolver.determine(callerApp: callerApp, cwd: cwd, env: env)
 
 // MARK: - 出力
 
@@ -65,7 +56,7 @@ for key in ["TERM_PROGRAM", "TMUX", "TMUX_PANE", "CMUX_WORKSPACE_ID", "CMUX_SURF
 print("")
 print("--- 検出結果 ---")
 print("  \(label("callerApp")) \(callerApp ?? "nil")  \(callerOverride != nil ? "(--caller で指定)" : "(自動検出)")")
-print("  \(label("cwd"))       \(detectedCwd ?? "nil")  \(cwdOverride != nil ? "(--cwd で指定)" : "(自動検出)")")
+print("  \(label("cwd"))       \(cwd ?? "nil")  \(cwdOverride != nil ? "(--cwd で指定)" : "(自動検出)")")
 
 print("")
 print("--- 戦略 ---")
