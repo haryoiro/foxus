@@ -1,8 +1,15 @@
 # foxus
 
-macOS でターミナル・エディタのウィンドウを特定してフォーカスを戻すSwiftライブラリ。
+macOS でターミナル・エディタのウィンドウを特定してフォーカスを戻す Swift ライブラリ。
 
-tmux / zellij / wezterm / kitty などのターミナルマルチプレクサのペイン復元にも対応。
+tmux / zellij / wezterm / kitty などのマルチプレクサのペイン復元にも対応。
+
+## インストール
+
+```swift
+// Package.swift
+.package(url: "https://github.com/haryoiro/foxus", from: "0.3.3")
+```
 
 ## 使い方
 
@@ -35,16 +42,7 @@ if !result.succeeded {
 | JetBrains IDE | `$TERMINAL_EMULATOR` など | AX API |
 | その他ターミナル | プロセスツリー自動検出 | AX API |
 
-## インストール
-
-```swift
-// Package.swift
-.package(url: "https://github.com/haryoiro/foxus", from: "0.0.4")
-```
-
-## 戦略を明示する
-
-`FocusStrategyResolver` で戦略を自分で決めてから実行することもできる:
+## strategy を明示する
 
 ```swift
 let strategy = FocusStrategyResolver.determine(
