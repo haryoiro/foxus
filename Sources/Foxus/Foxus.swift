@@ -42,18 +42,21 @@ public enum Foxus {
 
     /// 環境情報から戦略を決定してフォーカスを実行
     ///
+    /// `callerApp` を省略すると `ProcessDetector` で自動検出する。
+    ///
     /// - Parameters:
-    ///   - callerApp: 呼び出し元アプリ（TERM_PROGRAM名またはバンドルID）
-    ///   - cwd: 作業ディレクトリ
+    ///   - callerApp: 呼び出し元アプリ（省略時は自動検出）
+    ///   - cwd: 作業ディレクトリ（省略可）
     ///   - env: 環境変数辞書（デフォルト: ProcessInfo.processInfo.environment）
     /// - Returns: 採用された戦略と成否
     @discardableResult
     public static func focus(
-        callerApp: String?,
-        cwd: String?,
+        callerApp: String? = nil,
+        cwd: String? = nil,
         env: [String: String] = ProcessInfo.processInfo.environment
     ) -> FocusResult {
-        let strategy = FocusStrategyResolver.determine(callerApp: callerApp, cwd: cwd, env: env)
+        let resolved = callerApp ?? ProcessDetector.detectTerminalApp(env: env)
+        let strategy = FocusStrategyResolver.determine(callerApp: resolved, cwd: cwd, env: env)
         let succeeded = execute(strategy: strategy)
         return FocusResult(strategy: strategy, succeeded: succeeded)
     }
