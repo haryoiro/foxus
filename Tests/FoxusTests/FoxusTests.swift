@@ -1,3 +1,5 @@
+import Darwin
+import Foundation
 import Testing
 @testable import Foxus
 
@@ -394,5 +396,72 @@ struct FocusResultTests {
         let result = FocusResult(strategy: .fallback, succeeded: false)
         #expect(result.strategy == .fallback)
         #expect(result.succeeded == false)
+    }
+}
+
+// MARK: - ProcessUtils Tests
+
+@Suite("ProcessUtils Tests")
+struct ProcessUtilsTests {
+
+    // MARK: getProcessPwd
+
+    @Test("getProcessPwd: テストプロセス自身のPWDを取得できる")
+    func getProcessPwdCurrentProcess() {
+        // swift test はシェルから PWD を継承するため自プロセスで取得できるはず
+        let pwd = ProcessUtils.getProcessPwd(pid: getpid())
+        #expect(pwd != nil)
+        if let pwd = pwd {
+            var isDir: ObjCBool = false
+            #expect(FileManager.default.fileExists(atPath: pwd, isDirectory: &isDir) && isDir.boolValue)
+        }
+    }
+
+    @Test("getProcessPwd: 無効なPIDはnilを返す")
+    func getProcessPwdInvalidPid() {
+        #expect(ProcessUtils.getProcessPwd(pid: -1) == nil)
+    }
+
+    // MARK: findPidWithUnixSocket
+
+    @Test("findPidWithUnixSocket: 存在しないパスはnilを返す")
+    func findPidWithUnixSocketNotFound() {
+        let pid = ProcessUtils.findPidWithUnixSocket(containing: "foxus-nonexistent-\(UUID().uuidString)")
+        #expect(pid == nil)
+    }
+
+    @Test("findPidWithUnixSocket: 自プロセスが持つUnixソケットを検出できる")
+    func findPidWithUnixSocketSelf() throws {
+        // 一時Unixソケットを作成して bind し、自PIDが返ることを確認
+        let uniqueTag = "foxus-test-\(UUID().uuidString)"
+        let socketPath = "/tmp/\(uniqueTag).sock"
+
+        let fd = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
+        try #require(fd >= 0)
+        defer {
+            close(fd)
+            unlink(socketPath)
+        }
+
+        var addr = sockaddr_un()
+        addr.sun_family = sa_family_t(AF_UNIX)
+        addr.sun_len = UInt8(MemoryLayout<sockaddr_un>.size)
+        withUnsafeMutablePointer(to: &addr.sun_path) { ptr in
+            socketPath.withCString { src in
+                ptr.withMemoryRebound(to: CChar.self, capacity: 104) { dst in
+                    _ = strlcpy(dst, src, 104)
+                }
+            }
+        }
+
+        let bindResult = withUnsafePointer(to: &addr) { ptr in
+            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Darwin.bind(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
+            }
+        }
+        try #require(bindResult == 0)
+
+        let foundPid = ProcessUtils.findPidWithUnixSocket(containing: uniqueTag)
+        #expect(foundPid == getpid())
     }
 }

@@ -1,0 +1,24 @@
+{
+  "configurations": [
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:foxus}",
+      "name": "Debug foxus-debug",
+      "target": "foxus-debug",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug foxus-debug"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:foxus}",
+      "name": "Release foxus-debug",
+      "target": "foxus-debug",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release foxus-debug"
+    }
+  ]
+}

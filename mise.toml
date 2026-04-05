@@ -1,0 +1,18 @@
+[tasks.lint]
+run = "swiftlint lint"
+
+[tasks.test]
+run = "swift test"
+
+[tasks.build]
+run = "swift build -c release"
+
+[tasks.coverage]
+run = """
+swift test --enable-code-coverage
+BIN=$(swift build --show-bin-path)
+xcrun llvm-cov report \\
+  "$BIN/foxusPackageTests.xctest/Contents/MacOS/foxusPackageTests" \\
+  --instr-profile="$BIN/codecov/default.profdata" \\
+  --ignore-filename-regex="\\.build|Tests"
+"""
