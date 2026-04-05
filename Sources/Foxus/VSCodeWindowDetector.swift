@@ -46,7 +46,7 @@ public enum VSCodeWindowDetector {
         }
 
         // 方法4: TTY からシェルの cwd を取得してウィンドウタイトルを推測
-        if let windowTitle = WindowDetectorUtils.detectWindowTitleFromTty(),
+        if let windowTitle = ProcessUtils.detectWindowTitleFromTty(),
            WindowDetectorUtils.focusWindowByTitle(windowTitle, bundleIds: bundleIds) {
             return true
         }
@@ -76,11 +76,11 @@ public enum VSCodeWindowDetector {
     private static func detectPluginPwdFromIpcHandle() -> String? {
         guard let ipcHandle = ProcessInfo.processInfo.environment["VSCODE_GIT_IPC_HANDLE"],
               let socketId = extractSocketId(from: ipcHandle),
-              let pluginPid = WindowDetectorUtils.findPidWithUnixSocket(containing: "vscode-git-\(socketId)")
+              let pluginPid = ProcessUtils.findPidWithUnixSocket(containing: "vscode-git-\(socketId)")
         else {
             return nil
         }
-        return WindowDetectorUtils.getProcessPwd(pid: pluginPid)
+        return ProcessUtils.getProcessPwd(pid: pluginPid)
     }
 
     /// `vscode-git-{socketId}.sock` 形式のパスから socketId を抽出する。

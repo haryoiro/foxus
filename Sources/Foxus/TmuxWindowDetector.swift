@@ -66,7 +66,7 @@ public enum TmuxWindowDetector {
                     return bundleIdToTermProgram[bundleId] ?? bundleId
                 }
 
-                let parentPid = WindowDetectorUtils.getParentPid(of: currentPid)
+                let parentPid = ProcessUtils.getParentPid(of: currentPid)
                 guard parentPid > 1 else { break }
                 currentPid = parentPid
             }
@@ -121,7 +121,7 @@ public enum TmuxWindowDetector {
 
     /// tmuxバイナリのパスを検索
     private static var tmuxPath: String? {
-        WindowDetectorUtils.findBinary("tmux", fallbacks: [
+        ProcessUtils.findBinary("tmux", fallbacks: [
             "/opt/homebrew/bin/tmux",
             "/usr/local/bin/tmux",
             "/usr/bin/tmux"
@@ -161,7 +161,7 @@ public enum TmuxWindowDetector {
         }
         let args = baseArgs() + ["list-clients", "-F", "#{client_pid}"]
 
-        guard let output = WindowDetectorUtils.runCommand(tmux, arguments: args) else {
+        guard let output = ProcessUtils.runCommand(tmux, arguments: args) else {
             return []
         }
 
@@ -182,18 +182,18 @@ public enum TmuxWindowDetector {
 
         // ペインが所属するウィンドウに切替
         let displayArgs = base + ["display-message", "-t", paneId, "-p", "#{session_name}:#{window_index}"]
-        if let target = WindowDetectorUtils.runCommand(tmux, arguments: displayArgs)?
+        if let target = ProcessUtils.runCommand(tmux, arguments: displayArgs)?
             .trimmingCharacters(in: .whitespacesAndNewlines),
             !target.isEmpty {
             Log.focus.debug("  -> select-window -t \(target, privacy: .public)")
             let selectWindowArgs = base + ["select-window", "-t", target]
-            _ = WindowDetectorUtils.runCommand(tmux, arguments: selectWindowArgs)
+            _ = ProcessUtils.runCommand(tmux, arguments: selectWindowArgs)
         }
 
         // ペインを選択
         Log.focus.debug("  -> select-pane -t \(paneId, privacy: .public)")
         let selectPaneArgs = base + ["select-pane", "-t", paneId]
-        _ = WindowDetectorUtils.runCommand(tmux, arguments: selectPaneArgs)
+        _ = ProcessUtils.runCommand(tmux, arguments: selectPaneArgs)
     }
 
     // MARK: - Private: ユーティリティ

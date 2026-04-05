@@ -25,7 +25,7 @@ public enum IntelliJWindowDetector {
         // 方法2: __CFBundleIdentifier + 親プロセスのcwdからプロジェクトを特定
         if let bundleId = ProcessInfo.processInfo.environment["__CFBundleIdentifier"],
             bundleIds.contains(bundleId) {
-            if let parentCwd = WindowDetectorUtils.getParentCwd() {
+            if let parentCwd = ProcessUtils.getParentCwd() {
                 let projectName = (parentCwd as NSString).lastPathComponent
                 let apps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId)
                 for app in apps where WindowDetectorUtils.focusWindowInApp(app, matchingTitle: projectName) {
@@ -41,7 +41,7 @@ public enum IntelliJWindowDetector {
         }
 
         // 方法3: 親プロセスのcwdからプロジェクトを特定（全IDE検索）
-        if let parentCwd = WindowDetectorUtils.getParentCwd() {
+        if let parentCwd = ProcessUtils.getParentCwd() {
             let projectName = (parentCwd as NSString).lastPathComponent
             if !projectName.isEmpty {
                 if WindowDetectorUtils.focusWindowByTitle(projectName, bundleIds: bundleIds) {
@@ -51,7 +51,7 @@ public enum IntelliJWindowDetector {
         }
 
         // 方法4: TTYから特定
-        if let windowTitle = WindowDetectorUtils.detectWindowTitleFromTty() {
+        if let windowTitle = ProcessUtils.detectWindowTitleFromTty() {
             if WindowDetectorUtils.focusWindowByTitle(windowTitle, bundleIds: bundleIds) {
                 return true
             }

@@ -26,7 +26,7 @@ public enum ProcessDetector {
             guard !visitedPids.contains(currentPid) else { break }
             visitedPids.insert(currentPid)
 
-            let parentPid = WindowDetectorUtils.getParentPid(of: currentPid)
+            let parentPid = ProcessUtils.getParentPid(of: currentPid)
             guard parentPid > 1 else { break }  // init(1)に到達したら終了
 
             if let bundleId = getBundleId(for: parentPid) {
