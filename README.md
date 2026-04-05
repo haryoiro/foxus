@@ -42,9 +42,9 @@ if !result.succeeded {
 .package(url: "https://github.com/haryoiro/foxus", from: "0.0.4")
 ```
 
-## 上級者向け
+## 戦略を明示する
 
-戦略を自分で決めて実行することもできる:
+`FocusStrategyResolver` で戦略を自分で決めてから実行することもできる:
 
 ```swift
 let strategy = FocusStrategyResolver.determine(
