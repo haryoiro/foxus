@@ -59,7 +59,7 @@ print("  \(label("callerApp")) \(callerApp ?? "nil")  \(callerOverride != nil ? 
 print("  \(label("cwd"))       \(cwd ?? "nil")  \(cwdOverride != nil ? "(--cwd で指定)" : "(自動検出)")")
 
 print("")
-print("--- 戦略 ---")
+print("--- strategy ---")
 print("  \(strategy)")
 
 print("")
