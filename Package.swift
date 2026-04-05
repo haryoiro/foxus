@@ -8,11 +8,17 @@ let package = Package(
     ],
     products: [
         .library(name: "Foxus", targets: ["Foxus"]),
+        .executable(name: "foxus-debug", targets: ["FoxusDebug"]),
     ],
     targets: [
         .target(
             name: "Foxus",
             path: "Sources/Foxus"
+        ),
+        .executableTarget(
+            name: "FoxusDebug",
+            dependencies: ["Foxus"],
+            path: "Sources/FoxusDebug"
         ),
         .testTarget(
             name: "FoxusTests",
