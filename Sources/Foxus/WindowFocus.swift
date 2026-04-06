@@ -71,6 +71,29 @@ public enum WindowFocus {
         return true
     }
 
+    // MARK: - ウィンドウタイトル取得
+
+    /// アプリのフォーカスウィンドウ（なければメインウィンドウ）のタイトルを返す
+    public static func windowTitle(for app: NSRunningApplication) -> String? {
+        let axApp = AXUIElementCreateApplication(app.processIdentifier)
+        let window = axWindow(axApp, attribute: kAXFocusedWindowAttribute)
+                  ?? axWindow(axApp, attribute: kAXMainWindowAttribute)
+        guard let window else { return nil }
+        var ref: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &ref) == .success,
+              let title = ref as? String, !title.isEmpty else { return nil }
+        return title
+    }
+
+    private static func axWindow(_ axApp: AXUIElement, attribute: String) -> AXUIElement? {
+        var ref: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(axApp, attribute as CFString, &ref) == .success,
+              let element = ref as CFTypeRef?,
+              CFGetTypeID(element) == AXUIElementGetTypeID() else { return nil }
+        // swiftlint:disable:next force_cast
+        return (element as! AXUIElement)
+    }
+
     // MARK: - ウィンドウフォーカス
 
     /// cwdでフルパスマッチ → フォルダ名マッチの順でウィンドウをフォーカス
