@@ -32,7 +32,12 @@ public enum FocusStrategyResolver {
             }
         }
 
-        // 1. cmux（タブ復元が必要なため、tmuxより先に判定）
+        // 1. VSCode 統合ターミナル（VSCODE_GIT_IPC_HANDLE が明示的に VSCode 内を示す場合は cmux より優先）
+        if isVSCodeEnvironment(callerApp: nil, env: env) {
+            return .vscode(cwd: cwd)
+        }
+
+        // 2. cmux（タブ復元が必要なため、tmuxより先に判定）
         if env["CMUX_WORKSPACE_ID"] != nil {
             return .cmux(cwd: cwd)
         }
@@ -57,17 +62,14 @@ public enum FocusStrategyResolver {
             return .kitty(cwd: cwd)
         }
 
-        // 6. VSCode（callerApp 未指定時のみ環境変数で検出）
+        // 6. IntelliJ（callerApp 未指定時のみ環境変数で検出）
         if callerApp == nil || callerApp?.isEmpty == true {
-            if isVSCodeEnvironment(callerApp: nil, env: env) {
-                return .vscode(cwd: cwd)
-            }
             if isIntelliJEnvironment(callerApp: nil, env: env) {
                 return .intellij(cwd: cwd)
             }
         }
 
-        // 8. 汎用（callerAppからバンドルIDを解決）
+        // 7. 汎用（callerAppからバンドルIDを解決）
         let bundleId = resolveBundleId(callerApp)
         if bundleId != nil || cwd != nil {
             return .generic(bundleId: bundleId, cwd: cwd)

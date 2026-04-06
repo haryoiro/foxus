@@ -169,7 +169,7 @@ struct FocusStrategyResolverTests {
             cwd: nil,
             env: ["VSCODE_GIT_IPC_HANDLE": "/tmp/vscode-git-abc123.sock"]
         )
-        #expect(strategy == .generic(bundleId: "com.mitchellh.ghostty", cwd: nil))
+        #expect(strategy == .vscode(cwd: nil))
     }
 
     // MARK: IntelliJ
