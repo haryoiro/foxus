@@ -515,3 +515,142 @@ struct ProcessUtilsTests {
         #expect(foundPid == getpid())
     }
 }
+
+// MARK: - ResolvedContext Tests
+
+@Suite("ResolvedContext Tests")
+struct ResolvedContextTests {
+
+    @Test("resolve()がResolvedContextを返す")
+    func resolveReturnsContext() {
+        let context = Foxus.resolve(callerApp: "vscode", cwd: "/tmp/project", env: [:])
+        #expect(context.strategy == .vscode(cwd: "/tmp/project"))
+        #expect(context.callerApp == "vscode")
+        #expect(context.cwd == "/tmp/project")
+    }
+
+    @Test("ResolvedContextがCodableで往復する")
+    func codableRoundTrip() throws {
+        let original = ResolvedContext(
+            strategy: .cmux(cwd: "/tmp/project"),
+            callerApp: "cmux",
+            cwd: "/tmp/project",
+            env: ["CMUX_WORKSPACE_ID": "ws-123", "CMUX_SURFACE_ID": "sf-456"]
+        )
+        let data = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(ResolvedContext.self, from: data)
+        #expect(decoded.strategy == original.strategy)
+        #expect(decoded.callerApp == original.callerApp)
+        #expect(decoded.cwd == original.cwd)
+        #expect(decoded.env == original.env)
+    }
+
+    @Test("全FocusStrategy種別がCodableで往復する")
+    func allStrategiesCodable() throws {
+        let strategies: [FocusStrategy] = [
+            .cmux(cwd: "/a"), .tmux(cwd: "/b"), .zellij(cwd: nil),
+            .wezterm(cwd: "/c"), .kitty(cwd: "/d"),
+            .vscode(cwd: "/e"), .intellij(cwd: nil),
+            .generic(bundleId: "com.example", cwd: "/f"), .fallback,
+        ]
+        for strategy in strategies {
+            let data = try JSONEncoder().encode(strategy)
+            let decoded = try JSONDecoder().decode(FocusStrategy.self, from: data)
+            #expect(decoded == strategy, "Failed for \(strategy)")
+        }
+    }
+
+    @Test("resolve()がcmux用の環境変数を抽出する")
+    func resolveExtractsCmuxEnv() {
+        let env = [
+            "CMUX_WORKSPACE_ID": "ws-123",
+            "CMUX_SURFACE_ID": "sf-456",
+            "CMUX_SOCKET_PATH": "/tmp/cmux.sock",
+            "HOME": "/Users/test",
+        ]
+        // callerApp 未指定だと ProcessDetector が動くので、
+        // env からの戦略決定をテストするために空文字列を指定
+        let strategy = FocusStrategyResolver.determine(callerApp: nil, cwd: "/tmp", env: env)
+        #expect(strategy == .cmux(cwd: "/tmp"))
+
+        let context = ResolvedContext(
+            strategy: strategy, callerApp: nil, cwd: "/tmp",
+            env: env.filter { strategy.restoreKeys.contains($0.key) }
+        )
+        #expect(context.env["CMUX_WORKSPACE_ID"] == "ws-123")
+        #expect(context.env["CMUX_SURFACE_ID"] == "sf-456")
+        #expect(context.env["CMUX_SOCKET_PATH"] == "/tmp/cmux.sock")
+        #expect(context.env["HOME"] == nil)
+    }
+
+    @Test("resolve()がvscode用の環境変数を抽出する")
+    func resolveExtractsVSCodeEnv() {
+        let env = [
+            "TERM_PROGRAM": "vscode",
+            "VSCODE_GIT_IPC_HANDLE": "/tmp/vscode-git.sock",
+            "PATH": "/usr/bin",
+        ]
+        let strategy = FocusStrategyResolver.determine(callerApp: nil, cwd: "/tmp", env: env)
+        #expect(strategy == .vscode(cwd: "/tmp"))
+
+        let context = ResolvedContext(
+            strategy: strategy, callerApp: nil, cwd: "/tmp",
+            env: env.filter { strategy.restoreKeys.contains($0.key) }
+        )
+        #expect(context.env["VSCODE_GIT_IPC_HANDLE"] == "/tmp/vscode-git.sock")
+        #expect(context.env["TERM_PROGRAM"] == "vscode")
+        #expect(context.env["PATH"] == nil)
+    }
+}
+
+// MARK: - FocusStrategy.restoreKeys Tests
+
+@Suite("FocusStrategy restoreKeys Tests")
+struct RestoreKeysTests {
+
+    @Test("cmux戦略にcmux固有キーが含まれる")
+    func cmuxKeys() {
+        let keys = FocusStrategy.cmux(cwd: nil).restoreKeys
+        #expect(keys.contains("CMUX_WORKSPACE_ID"))
+        #expect(keys.contains("CMUX_SURFACE_ID"))
+        #expect(keys.contains("CMUX_SOCKET_PATH"))
+    }
+
+    @Test("tmux戦略にtmux固有キーが含まれる")
+    func tmuxKeys() {
+        let keys = FocusStrategy.tmux(cwd: nil).restoreKeys
+        #expect(keys.contains("TMUX"))
+        #expect(keys.contains("TMUX_PANE"))
+    }
+
+    @Test("vscode戦略にvscode固有キーが含まれる")
+    func vscodeKeys() {
+        let keys = FocusStrategy.vscode(cwd: nil).restoreKeys
+        #expect(keys.contains("VSCODE_GIT_IPC_HANDLE"))
+    }
+
+    @Test("全戦略にTERM_PROGRAMが含まれる")
+    func commonKeys() {
+        let strategies: [FocusStrategy] = [
+            .cmux(cwd: nil), .tmux(cwd: nil), .vscode(cwd: nil), .intellij(cwd: nil),
+        ]
+        for s in strategies {
+            #expect(s.restoreKeys.contains("TERM_PROGRAM"), "Missing TERM_PROGRAM in \(s)")
+        }
+    }
+
+    @Test("fallbackのrestoreKeysは共通キーのみ")
+    func fallbackKeys() {
+        let keys = FocusStrategy.fallback.restoreKeys
+        #expect(keys.contains("TERM_PROGRAM"))
+        #expect(!keys.contains("CMUX_WORKSPACE_ID"))
+        #expect(!keys.contains("TMUX"))
+    }
+
+    @Test("callerApp=vscodeがcmuxより優先される")
+    func callerAppVSCodeOverCmux() {
+        let env = ["CMUX_WORKSPACE_ID": "ws-123"]
+        let context = Foxus.resolve(callerApp: "vscode", cwd: "/tmp", env: env)
+        #expect(context.strategy == .vscode(cwd: "/tmp"))
+    }
+}
