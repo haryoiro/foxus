@@ -8,6 +8,9 @@ import Foundation
 /// AXウィンドウ操作を含まない低レベル操作を担う。
 public enum ProcessUtils {
 
+    /// シェルプロセスの名前一覧（プロセス名マッチに使用）
+    public static let shellNames: Set<String> = ["zsh", "bash", "fish", "sh", "dash", "tcsh", "ksh"]
+
     // MARK: - cwd 取得（libproc）
 
     /// 指定PIDのcwdを取得（proc_pidinfo使用）
@@ -56,7 +59,6 @@ public enum ProcessUtils {
 
     /// 指定TTYデバイスを使用しているシェルプロセスのPIDを取得
     public static func findShellPidByTty(_ ttyDev: dev_t) -> pid_t? {
-        let shellNames = ["zsh", "bash", "fish", "sh"]
         var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0]
         var size: size_t = 0
 
@@ -246,7 +248,6 @@ public enum ProcessUtils {
 
     /// 指定PIDの直接の子プロセスのうち、シェルプロセスをPID昇順で返す。
     public static func findShellChildren(of parentPid: pid_t) -> [pid_t] {
-        let shellNames: Set<String> = ["zsh", "bash", "fish", "sh", "dash", "tcsh", "ksh"]
         var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0]
         var size: size_t = 0
         guard sysctl(&mib, 4, nil, &size, nil, 0) == 0 else { return [] }

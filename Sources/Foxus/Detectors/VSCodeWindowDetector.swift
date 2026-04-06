@@ -85,8 +85,7 @@ public enum VSCodeWindowDetector {
         }
 
         // シェル名の場合はマッチの精度が低いためスキップ
-        let shellNames: Set<String> = ["zsh", "bash", "fish", "sh", "dash", "tcsh", "ksh"]
-        if shellNames.contains(pcomm) {
+        if ProcessUtils.shellNames.contains(pcomm) {
             Log.focus.debug("VSCodeTerminalTab: p_comm がシェル名 (\(pcomm, privacy: .public))、タブマッチをスキップ")
             return false
         }
