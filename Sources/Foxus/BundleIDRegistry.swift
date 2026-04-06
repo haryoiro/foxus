@@ -46,10 +46,18 @@ public enum BundleIDRegistry {
 
     // MARK: - Terminals
 
+    // MARK: - Zed
+
+    /// Zed のバンドルID
+    public static let zedBundleIds: [String] = [
+        "dev.zed.Zed"
+    ]
+
     /// ターミナルアプリのバンドルID → TERM_PROGRAM名 マッピング
     public static let terminalApps: [String: String] = [
         "com.microsoft.VSCode": "vscode",
         "com.microsoft.VSCodeInsiders": "vscode",
+        "dev.zed.Zed": "zed",
         "com.googlecode.iterm2": "iTerm.app",
         "com.apple.Terminal": "Apple_Terminal",
         "dev.warp.Warp-Stable": "WarpTerminal",
@@ -78,6 +86,7 @@ public enum BundleIDRegistry {
     public static let termProgramToBundleId: [String: String] = [
         "vscode": "com.microsoft.VSCode",
         "VSCode": "com.microsoft.VSCode",
+        "zed": "dev.zed.Zed",
         "iTerm.app": "com.googlecode.iterm2",
         "Apple_Terminal": "com.apple.Terminal",
         "WarpTerminal": "dev.warp.Warp-Stable",

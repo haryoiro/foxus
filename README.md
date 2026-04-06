@@ -39,6 +39,7 @@ if !result.succeeded {
 | WezTerm | `$WEZTERM_PANE` | `wezterm cli focus-pane` |
 | kitty | `$KITTY_WINDOW_ID` | `kitten @ focus-window` |
 | VSCode / Cursor | `$VSCODE_GIT_IPC_HANDLE` など | IPC + AX API（※） |
+| Zed | `$TERM_PROGRAM=zed` | AX API |
 | JetBrains IDE | `$TERMINAL_EMULATOR` など | AX API |
 | その他ターミナル | プロセスツリー自動検出 | AX API |
 
