@@ -130,8 +130,8 @@ public enum VSCodeIPCClient {
         guard sockFd >= 0 else { return nil }
         defer { Darwin.close(sockFd) }
 
-        // タイムアウト設定（2秒）
-        var timeout = timeval(tv_sec: 2, tv_usec: 0)
+        // タイムアウト設定（500ms）
+        var timeout = timeval(tv_sec: 0, tv_usec: 500_000)
         setsockopt(sockFd, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
         setsockopt(sockFd, SOL_SOCKET, SO_SNDTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
 
