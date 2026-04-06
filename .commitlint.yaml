@@ -1,0 +1,40 @@
+min-version: v0.12.0
+formatter: default
+rules:
+- header-min-length
+- header-max-length
+- body-max-line-length
+- footer-max-line-length
+- type-enum
+severity:
+  default: error
+  rules: {}
+settings:
+  body-max-line-length:
+    argument: 200
+    flags: {}
+  footer-max-line-length:
+    argument: 200
+    flags: {}
+  header-max-length:
+    argument: 72
+    flags: {}
+  header-min-length:
+    argument: 10
+    flags: {}
+  type-enum:
+    argument:
+    - "✨"   # feat: 新機能
+    - "🐛"   # fix: バグ修正
+    - "📝"   # docs: ドキュメント
+    - "🎨"   # style: フォーマット
+    - "♻️"   # refactor: リファクタリング
+    - "⚡"   # perf: パフォーマンス改善
+    - "✅"   # test: テスト
+    - "🔧"   # build/chore: ビルド・設定
+    - "👷"   # ci: CI設定
+    - "🔥"   # remove: コード・ファイル削除
+    - "⏪"   # revert: 変更の取り消し
+    flags: {}
+disable-default-ignores: false
+ignores: []

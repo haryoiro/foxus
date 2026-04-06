@@ -1,5 +1,6 @@
 [tools]
 # Swift は Xcode に含まれるものを使用
+go = "latest"
 lefthook = "latest"
 swiftlint = "latest"
 

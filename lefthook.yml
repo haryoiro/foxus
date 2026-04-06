@@ -1,3 +1,10 @@
+commit-msg:
+  commands:
+    commitlint:
+      run: mise x -- commitlint lint --message {1}
+    japanese-description:
+      run: head -1 {1} | sed 's/^[^:]*:\ //' | grep -qE '[ぁ-んァ-ヶ一-龠]' || { echo "❌ description は日本語で書いてください"; exit 1; }
+
 pre-commit:
   commands:
     lint:
