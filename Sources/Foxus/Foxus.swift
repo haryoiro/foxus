@@ -46,24 +46,43 @@ public enum Foxus {
         }
     }
 
-    /// 環境情報から戦略を決定してフォーカスを実行
+    /// フォーカスせずに戦略と復元用コンテキストだけ返す。
     ///
-    /// `callerApp`・`cwd` ともに省略すると自動検出する。
-    ///
-    /// - Parameters:
-    ///   - callerApp: 呼び出し元アプリ（省略時は自動検出）
-    ///   - cwd: 作業ディレクトリ（省略時は自動検出）
-    ///   - env: 環境変数辞書（デフォルト: ProcessInfo.processInfo.environment）
-    /// - Returns: 採用された戦略と成否（失敗時はエラー原因を含む）
-    @discardableResult
-    public static func focus(
+    /// hook から呼ばれた時点のプロセスコンテキスト（環境変数・プロセスツリー）で
+    /// 戦略を決定し、後から `execute(context:)` で復元できる情報を返す。
+    public static func resolve(
         callerApp: String? = nil,
         cwd: String? = nil,
         env: [String: String] = ProcessInfo.processInfo.environment
-    ) -> FocusResult {
-        let resolved = callerApp ?? ProcessDetector.detectTerminalApp(env: env)
+    ) -> ResolvedContext {
+        let resolvedCaller = callerApp ?? ProcessDetector.detectTerminalApp(env: env)
         let resolvedCwd = cwd ?? ProcessUtils.getCwdFromCurrentTty() ?? ProcessUtils.getParentCwd()
-        let strategy = FocusStrategyResolver.determine(callerApp: resolved, cwd: resolvedCwd, env: env)
+        let strategy = FocusStrategyResolver.determine(callerApp: resolvedCaller, cwd: resolvedCwd, env: env)
+
+        // 戦略に応じた復元用環境変数を抽出
+        let restoreEnv = env.filter { strategy.restoreKeys.contains($0.key) }
+
+        return ResolvedContext(
+            strategy: strategy,
+            callerApp: resolvedCaller,
+            cwd: resolvedCwd,
+            env: restoreEnv
+        )
+    }
+
+    /// 保存済みコンテキストからフォーカスを実行する。
+    ///
+    /// `resolve()` で取得したコンテキストを保存しておき、
+    /// 後から（別プロセスからでも）復元してフォーカスできる。
+    @discardableResult
+    public static func execute(context: ResolvedContext) -> FocusResult {
+        // コンテキストの env を使って戦略を再決定
+        // （戦略に紐づく環境変数が保存されているため正しく復元できる）
+        let strategy = FocusStrategyResolver.determine(
+            callerApp: context.callerApp,
+            cwd: context.cwd,
+            env: context.env
+        )
 
         if case .fallback = strategy {
             return FocusResult(strategy: strategy, succeeded: false, error: .noStrategyAvailable)
@@ -72,6 +91,17 @@ public enum Foxus {
         let succeeded = execute(strategy: strategy)
         let error: FocusError? = succeeded ? nil : .focusFailed(strategy: strategy)
         return FocusResult(strategy: strategy, succeeded: succeeded, error: error)
+    }
+
+    /// 環境情報から戦略を決定してフォーカスを実行
+    @discardableResult
+    public static func focus(
+        callerApp: String? = nil,
+        cwd: String? = nil,
+        env: [String: String] = ProcessInfo.processInfo.environment
+    ) -> FocusResult {
+        let context = resolve(callerApp: callerApp, cwd: cwd, env: env)
+        return execute(context: context)
     }
 
     // MARK: - Private
@@ -108,6 +138,28 @@ public enum Foxus {
         }
 
         return false
+    }
+}
+
+// MARK: - ResolvedContext
+
+/// `resolve()` が返す、フォーカス復元に必要な全情報。
+/// `Codable` なので JSON で保存・復元できる。
+public struct ResolvedContext: Codable {
+    /// 決定された戦略
+    public let strategy: FocusStrategy
+    /// 検出された呼び出し元アプリ
+    public let callerApp: String?
+    /// 作業ディレクトリ
+    public let cwd: String?
+    /// 復元に必要な環境変数のスナップショット
+    public let env: [String: String]
+
+    public init(strategy: FocusStrategy, callerApp: String?, cwd: String?, env: [String: String]) {
+        self.strategy = strategy
+        self.callerApp = callerApp
+        self.cwd = cwd
+        self.env = env
     }
 }
 

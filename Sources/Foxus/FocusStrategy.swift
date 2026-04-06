@@ -4,7 +4,7 @@ import Foundation
 ///
 /// GUI操作から切り離された純粋なデータ型。
 /// 「どのDetectorを使うか」の判定ロジックだけをテスト可能にする。
-public enum FocusStrategy: Equatable {
+public enum FocusStrategy: Equatable, Codable {
     /// cmux環境: cmuxアプリにフォーカス + タブ（Surface）復元
     case cmux(cwd: String?)
     /// tmux環境: 実ターミナルにフォーカス + ペイン復元
@@ -23,6 +23,33 @@ public enum FocusStrategy: Equatable {
     case generic(bundleId: String?, cwd: String?)
     /// 最終フォールバック: frontmostApplicationに戻す
     case fallback
+}
+
+extension FocusStrategy {
+    /// この戦略の復元に必要な環境変数キー。
+    /// Detector ごとに異なる。新しい Detector を追加したらここにも追加する。
+    public var restoreKeys: Set<String> {
+        var keys: Set<String> = ["TERM_PROGRAM", "__CFBundleIdentifier"]
+        switch self {
+        case .cmux:
+            keys.formUnion(["CMUX_WORKSPACE_ID", "CMUX_SURFACE_ID", "CMUX_SOCKET_PATH"])
+        case .tmux:
+            keys.formUnion(["TMUX", "TMUX_PANE"])
+        case .zellij:
+            keys.formUnion(["ZELLIJ", "ZELLIJ_PANE_ID"])
+        case .wezterm:
+            keys.formUnion(["WEZTERM_PANE", "WEZTERM_UNIX_SOCKET"])
+        case .kitty:
+            keys.formUnion(["KITTY_WINDOW_ID"])
+        case .vscode:
+            keys.formUnion(["VSCODE_GIT_IPC_HANDLE"])
+        case .intellij:
+            keys.formUnion(["TERMINAL_EMULATOR", "__INTELLIJ_COMMAND_HISTFILE__"])
+        case .generic, .fallback:
+            break
+        }
+        return keys
+    }
 }
 
 /// フォーカス失敗の原因
