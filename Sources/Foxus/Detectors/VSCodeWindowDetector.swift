@@ -244,13 +244,6 @@ public enum VSCodeWindowDetector {
 
             guard let window = matchedWindow else {
                 dlog("マッチなし targetPath=\(targetPath)")
-                // フォルダなしウィンドウがあればフォールバックでアクティブ化
-                if let blank = diagnostics.windows.first(where: { $0.folderPaths.isEmpty }) {
-                    dlog("フォルダなしウィンドウ id=\(blank.id) をアクティブ化")
-                    let focused = VSCodeIPCClient.focusWindow(folderPath: targetPath, socketPath: entry.socketPath)
-                    dlog("blank fallback result=\(focused)")
-                    return focused
-                }
                 continue
             }
 
