@@ -31,19 +31,29 @@ if !result.succeeded {
 
 ## 対応環境
 
-| 環境 | 検出方法 | ペイン/タブ復元 |
-|---|---|---|
-| cmux | `$CMUX_WORKSPACE_ID` | socket API |
-| tmux | `$TMUX` | `tmux select-pane` |
-| zellij | `$ZELLIJ` | `zellij action focus-pane-with-id` |
-| WezTerm | `$WEZTERM_PANE` | `wezterm cli focus-pane` |
-| kitty | `$KITTY_WINDOW_ID` | `kitten @ focus-window` |
-| VSCode / Cursor | `$VSCODE_GIT_IPC_HANDLE` など | IPC + AX API（※） |
-| Zed | `$TERM_PROGRAM=zed` | AX API |
-| JetBrains IDE | `$TERMINAL_EMULATOR` など | AX API |
-| その他ターミナル | プロセスツリー自動検出 | AX API |
+### ターミナルマルチプレクサ
 
-### VSCode ターミナルタブフォーカス（※）
+| 環境 | ウィンドウフォーカス | ペイン/タブ復元 |
+|---|---|---|
+| cmux | ✅ | ✅ socket API |
+| tmux | ✅ | ✅ `tmux select-pane` |
+| zellij | ✅ | ✅ `zellij action focus-pane-with-id` |
+| WezTerm | ✅ | ✅ `wezterm cli focus-pane` |
+| kitty | ✅ | ✅ `kitten @ focus-window` |
+
+### エディタ統合ターミナル
+
+| エディタ | ウィンドウフォーカス | ターミナルタブフォーカス | 備考 |
+|---|---|---|---|
+| VSCode / Cursor | ✅ IPC | ✅ AX API | settings.json の変更で精度向上（後述） |
+| Zed | ✅ AX API | ❌ | GPUI が Accessibility 未対応のため ([#6576](https://github.com/zed-industries/zed/discussions/6576)) |
+| JetBrains IDE | ✅ AX API | ❌ | |
+
+### その他ターミナル
+
+プロセスツリーからアプリを自動検出し、AX API でウィンドウをフォーカスします。
+
+### VSCode ターミナルタブフォーカス
 
 複数のターミナルタブがある場合、正しいタブまで自動フォーカスします。
 
