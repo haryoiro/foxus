@@ -25,11 +25,6 @@ public enum VSCodeWindowDetector {
         // 方法1: VSCode IPC ソケット経由でウィンドウを特定（タイトルマッチ不要）
         // folderURIs.path が cwd と完全一致するウィンドウを探す
         if let cwd = cwd, focusViaIPC(targetPath: cwd) {
-            // VSCode ターミナル内からの呼び出し時のみターミナルタブもフォーカス試行
-            // （notilis など外部からの呼び出しでは不要かつ 3 秒 sleep が発生するためスキップ）
-            if env["VSCODE_GIT_IPC_HANDLE"] != nil {
-                _ = focusTerminalTab(bundleIds: bundleIds)
-            }
             return true
         }
 
@@ -224,8 +219,12 @@ public enum VSCodeWindowDetector {
 
             Log.focus.debug("VSCodeIPC: matched window id=\(window.id) title=\(window.title, privacy: .public)")
 
-            // launch.start() でウィンドウをフォーカス（app.focus({steal:true}) 相当）
-            let focused = VSCodeIPCClient.focusWindow(folderPath: targetPath, socketPath: entry.socketPath)
+            // launch.start() には targetPath ではなく VSCode が認識している folderPath を渡す
+            // （cwd がサブディレクトリの場合、targetPath ではウィンドウが特定できない）
+            let folderPath = window.folderPaths.first { fp in
+                fp == targetPath || targetPath.hasPrefix(fp + "/")
+            } ?? targetPath
+            let focused = VSCodeIPCClient.focusWindow(folderPath: folderPath, socketPath: entry.socketPath)
             Log.focus.debug("VSCodeIPC: launch.start result=\(focused)")
             return focused
         }
