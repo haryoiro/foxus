@@ -46,8 +46,8 @@ if !result.succeeded {
 | エディタ | ウィンドウフォーカス | ターミナルタブフォーカス | 備考 |
 |---|---|---|---|
 | VSCode / Cursor | ✅ IPC | ✅ AX API | settings.json の変更で精度向上（後述） |
+| JetBrains IDE | ✅ AX API | ✅ ideScript | プロセスツリーからタブを特定 |
 | Zed | ✅ AX API | ❌ | GPUI が Accessibility 未対応のため ([#6576](https://github.com/zed-industries/zed/discussions/6576)) |
-| JetBrains IDE | ✅ AX API | ❌ | |
 
 ### その他ターミナル
 

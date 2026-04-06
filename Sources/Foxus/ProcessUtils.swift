@@ -229,6 +229,57 @@ public enum ProcessUtils {
         return nil
     }
 
+    /// 指定PIDのプロセス名 (`p_comm`) を取得
+    public static func getProcessName(pid: pid_t) -> String? {
+        var info = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.size
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
+        guard sysctl(&mib, UInt32(mib.count), &info, &size, nil, 0) == 0 else { return nil }
+
+        let name = withUnsafePointer(to: info.kp_proc.p_comm) { ptr in
+            ptr.withMemoryRebound(to: CChar.self, capacity: Int(MAXCOMLEN)) { charPtr in
+                String(cString: charPtr)
+            }
+        }
+        return name.isEmpty ? nil : name
+    }
+
+    /// 指定PIDの直接の子プロセスのうち、シェルプロセスをPID昇順で返す。
+    public static func findShellChildren(of parentPid: pid_t) -> [pid_t] {
+        let shellNames: Set<String> = ["zsh", "bash", "fish", "sh", "dash", "tcsh", "ksh"]
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0]
+        var size: size_t = 0
+        guard sysctl(&mib, 4, nil, &size, nil, 0) == 0 else { return [] }
+        let count = size / MemoryLayout<kinfo_proc>.size
+        var procs = [kinfo_proc](repeating: kinfo_proc(), count: count)
+        guard sysctl(&mib, 4, &procs, &size, nil, 0) == 0 else { return [] }
+
+        var result: [pid_t] = []
+        for proc in procs where proc.kp_eproc.e_ppid == parentPid {
+            let name = withUnsafePointer(to: proc.kp_proc.p_comm) { ptr in
+                ptr.withMemoryRebound(to: CChar.self, capacity: Int(MAXCOMLEN)) { charPtr in
+                    String(cString: charPtr)
+                }
+            }
+            if shellNames.contains(name) {
+                result.append(proc.kp_proc.p_pid)
+            }
+        }
+        return result.sorted()
+    }
+
+    /// 祖先プロセスを辿り、指定の親PIDを持つ祖先のPIDを返す。
+    public static func findAncestorWithParent(_ targetParentPid: pid_t) -> pid_t? {
+        var pid = getpid()
+        for _ in 0..<20 {
+            let ppid = getParentPid(of: pid)
+            if ppid <= 1 { return nil }
+            if ppid == targetParentPid { return pid }
+            pid = ppid
+        }
+        return nil
+    }
+
     // MARK: - バイナリ検索
 
     /// PATH環境変数とフォールバックパスからコマンドバイナリを検索
