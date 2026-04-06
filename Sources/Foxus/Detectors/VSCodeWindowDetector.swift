@@ -18,18 +18,24 @@ public enum VSCodeWindowDetector {
     /// VSCode ウィンドウを特定してフォーカスする。
     /// - Parameter cwd: hooks JSON から渡される作業ディレクトリ
     /// - Returns: 正しいウィンドウへのフォーカスに成功した場合は `true`
-    public static func focusCurrentWindow(cwd: String? = nil) -> Bool {
+    public static func focusCurrentWindow(
+        cwd: String? = nil,
+        env: [String: String] = ProcessInfo.processInfo.environment
+    ) -> Bool {
         // 方法1: VSCode IPC ソケット経由でウィンドウを特定（タイトルマッチ不要）
         // folderURIs.path が cwd と完全一致するウィンドウを探す
         if let cwd = cwd, focusViaIPC(targetPath: cwd) {
-            // ウィンドウフォーカス成功 → ターミナルタブもフォーカス試行
-            _ = focusTerminalTab(bundleIds: bundleIds)
+            // VSCode ターミナル内からの呼び出し時のみターミナルタブもフォーカス試行
+            // （notilis など外部からの呼び出しでは不要かつ 3 秒 sleep が発生するためスキップ）
+            if env["VSCODE_GIT_IPC_HANDLE"] != nil {
+                _ = focusTerminalTab(bundleIds: bundleIds)
+            }
             return true
         }
 
         // 方法2: VSCODE_GIT_IPC_HANDLE からウィンドウを特定
         // ソケット保持プロセスの PWD = そのウィンドウのワークスペースパス
-        if let pluginPwd = detectPluginPwdFromIpcHandle() {
+        if let pluginPwd = detectPluginPwdFromIpcHandle(env: env) {
             let projectName = (pluginPwd as NSString).lastPathComponent
             if !projectName.isEmpty,
                WindowFocus.focusWindowByTitle(projectName, bundleIds: bundleIds) {
@@ -246,8 +252,8 @@ public enum VSCodeWindowDetector {
     ///
     /// ソケットはウィンドウごとにユニークなため、複数ウィンドウがある場合でも
     /// 正しいウィンドウを特定できる。
-    private static func detectPluginPwdFromIpcHandle() -> String? {
-        guard let ipcHandle = ProcessInfo.processInfo.environment["VSCODE_GIT_IPC_HANDLE"],
+    private static func detectPluginPwdFromIpcHandle(env: [String: String] = ProcessInfo.processInfo.environment) -> String? {
+        guard let ipcHandle = env["VSCODE_GIT_IPC_HANDLE"],
               let socketId = extractSocketId(from: ipcHandle),
               let pluginPid = ProcessUtils.findPidWithUnixSocket(containing: "vscode-git-\(socketId)")
         else {

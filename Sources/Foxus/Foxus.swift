@@ -40,7 +40,7 @@ public enum Foxus {
         case .kitty(let cwd):
             return KittyWindowDetector.focusCurrentWindow(cwd: cwd)
         case .vscode(let cwd):
-            return VSCodeWindowDetector.focusCurrentWindow(cwd: cwd)
+            return VSCodeWindowDetector.focusCurrentWindow(cwd: cwd, env: env)
         case .intellij(let cwd):
             return IntelliJWindowDetector.focusCurrentWindow(cwd: cwd)
         case .generic(let bundleId, let cwd):
@@ -66,23 +66,11 @@ public enum Foxus {
         // 戦略に応じた復元用環境変数を抽出
         let restoreEnv = env.filter { strategy.restoreKeys.contains($0.key) }
 
-        // callerApp からターミナルウィンドウタイトルを取得
-        let windowTitle: String? = resolvedCaller.flatMap { caller -> String? in
-            let bundleId = caller.contains(".")
-                ? caller
-                : BundleIDRegistry.termProgramToBundleId[caller]
-            guard let bundleId,
-                  let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId).first
-            else { return nil }
-            return WindowFocus.windowTitle(for: app)
-        }
-
         return ResolvedContext(
             strategy: strategy,
             callerApp: resolvedCaller,
             cwd: resolvedCwd,
-            env: restoreEnv,
-            windowTitle: windowTitle
+            env: restoreEnv
         )
     }
 
@@ -170,15 +158,11 @@ public struct ResolvedContext: Codable {
     public let cwd: String?
     /// 復元に必要な環境変数のスナップショット
     public let env: [String: String]
-    /// resolve() 時点のターミナルウィンドウタイトル（取得できない場合は nil）
-    public let windowTitle: String?
-
-    public init(strategy: FocusStrategy, callerApp: String?, cwd: String?, env: [String: String], windowTitle: String? = nil) {
+    public init(strategy: FocusStrategy, callerApp: String?, cwd: String?, env: [String: String]) {
         self.strategy = strategy
         self.callerApp = callerApp
         self.cwd = cwd
         self.env = env
-        self.windowTitle = windowTitle
     }
 }
 
