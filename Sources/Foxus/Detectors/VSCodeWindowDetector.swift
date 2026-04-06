@@ -15,6 +15,25 @@ public enum VSCodeWindowDetector {
 
     private static var bundleIds: [String] { BundleIDRegistry.vscodeBundleIds }
 
+    // MARK: - デバッグログ
+
+    private static let debugLogPath = "/tmp/notilis-focus.log"
+
+    private static func dlog(_ msg: String) {
+        let line = "[\(Date())] [VSCode] \(msg)\n"
+        if let data = line.data(using: .utf8),
+           let fh = FileHandle(forWritingAtPath: debugLogPath) {
+            fh.seekToEndOfFile()
+            fh.write(data)
+            fh.closeFile()
+        } else {
+            try? line.data(using: .utf8)?.write(
+                to: URL(fileURLWithPath: debugLogPath),
+                options: .atomic
+            )
+        }
+    }
+
     /// VSCode ウィンドウを特定してフォーカスする。
     /// - Parameter cwd: hooks JSON から渡される作業ディレクトリ
     /// - Returns: 正しいウィンドウへのフォーカスに成功した場合は `true`
@@ -22,16 +41,21 @@ public enum VSCodeWindowDetector {
         cwd: String? = nil,
         env: [String: String] = ProcessInfo.processInfo.environment
     ) -> Bool {
+        dlog("focusCurrentWindow cwd=\(cwd ?? "nil")")
+
         // 方法1: VSCode IPC ソケット経由でウィンドウを特定（タイトルマッチ不要）
         // folderURIs.path が cwd と完全一致するウィンドウを探す
-        if let cwd = cwd, focusViaIPC(targetPath: cwd) {
-            return true
+        if let cwd = cwd {
+            let result = focusViaIPC(targetPath: cwd)
+            dlog("方法1(IPC) result=\(result)")
+            if result { return true }
         }
 
         // 方法2: VSCODE_GIT_IPC_HANDLE からウィンドウを特定
         // ソケット保持プロセスの PWD = そのウィンドウのワークスペースパス
         if let pluginPwd = detectPluginPwdFromIpcHandle(env: env) {
             let projectName = (pluginPwd as NSString).lastPathComponent
+            dlog("方法2(IPC_HANDLE) pluginPwd=\(pluginPwd) projectName=\(projectName)")
             if !projectName.isEmpty,
                WindowFocus.focusWindowByTitle(projectName, bundleIds: bundleIds) {
                 _ = focusTerminalTab(bundleIds: bundleIds)
@@ -42,6 +66,7 @@ public enum VSCodeWindowDetector {
         // 方法3: cwd のフォルダ名でウィンドウタイトルをマッチ
         if let cwd = cwd {
             let projectName = (cwd as NSString).lastPathComponent
+            dlog("方法3(titleMatch) projectName=\(projectName)")
             if !projectName.isEmpty,
                WindowFocus.focusWindowByTitle(projectName, bundleIds: bundleIds) {
                 _ = focusTerminalTab(bundleIds: bundleIds)
@@ -50,8 +75,8 @@ public enum VSCodeWindowDetector {
         }
 
         // 方法4: git worktree 内の場合、親リポジトリ名でマッチ
-        // 例: /path/to/myrepo/.worktrees/feature/branch → "myrepo" でウィンドウを検索
         if let cwd = cwd, let parentRepoName = extractWorktreeParentName(from: cwd) {
+            dlog("方法4(worktree) parentRepoName=\(parentRepoName)")
             if WindowFocus.focusWindowByTitle(parentRepoName, bundleIds: bundleIds) {
                 _ = focusTerminalTab(bundleIds: bundleIds)
                 return true
@@ -59,13 +84,16 @@ public enum VSCodeWindowDetector {
         }
 
         // 方法5: TTY からシェルの cwd を取得してウィンドウタイトルを推測
-        if let windowTitle = ProcessUtils.detectWindowTitleFromTty(),
-           WindowFocus.focusWindowByTitle(windowTitle, bundleIds: bundleIds) {
-            _ = focusTerminalTab(bundleIds: bundleIds)
-            return true
+        if let windowTitle = ProcessUtils.detectWindowTitleFromTty() {
+            dlog("方法5(TTY) windowTitle=\(windowTitle)")
+            if WindowFocus.focusWindowByTitle(windowTitle, bundleIds: bundleIds) {
+                _ = focusTerminalTab(bundleIds: bundleIds)
+                return true
+            }
         }
 
         // 方法6: フォールバック — ウィンドウ特定を諦め、アプリ全体をアクティブ化
+        dlog("方法6(fallback) アプリ全体アクティブ化")
         return WindowFocus.focusAnyApp(bundleIds: bundleIds)
     }
 
@@ -199,33 +227,39 @@ public enum VSCodeWindowDetector {
             Log.focus.debug("VSCodeIPC: trying \(entry.socketPath, privacy: .public)")
 
             guard let diagnostics = VSCodeIPCClient.getMainDiagnostics(socketPath: entry.socketPath) else {
-                Log.focus.debug("VSCodeIPC: getMainDiagnostics failed")
+                dlog("getMainDiagnostics 失敗 socket=\(entry.socketPath)")
                 continue
             }
 
-            // targetPath に完全一致するウィンドウを探す
-            // git worktree の場合も考慮してプレフィックスマッチも試みる
+            dlog("windows(\(diagnostics.windows.count)):")
+            for w in diagnostics.windows {
+                dlog("  id=\(w.id) title=\(w.title) folders=\(w.folderPaths)")
+            }
+
             let matchedWindow = diagnostics.windows.first { window in
-                window.folderPaths.contains { folderPath in
-                    folderPath == targetPath || targetPath.hasPrefix(folderPath + "/")
+                window.folderPaths.contains { fp in
+                    fp == targetPath || targetPath.hasPrefix(fp + "/")
                 }
             }
 
             guard let window = matchedWindow else {
-                Log.focus.debug("VSCodeIPC: no matching window for \(targetPath, privacy: .public)")
-                Log.focus.debug("VSCodeIPC: available paths: \(diagnostics.windows.flatMap(\.folderPaths), privacy: .public)")
+                dlog("マッチなし targetPath=\(targetPath)")
+                // フォルダなしウィンドウがあればフォールバックでアクティブ化
+                if let blank = diagnostics.windows.first(where: { $0.folderPaths.isEmpty }) {
+                    dlog("フォルダなしウィンドウ id=\(blank.id) をアクティブ化")
+                    let focused = VSCodeIPCClient.focusWindow(folderPath: targetPath, socketPath: entry.socketPath)
+                    dlog("blank fallback result=\(focused)")
+                    return focused
+                }
                 continue
             }
 
-            Log.focus.debug("VSCodeIPC: matched window id=\(window.id) title=\(window.title, privacy: .public)")
-
-            // launch.start() には targetPath ではなく VSCode が認識している folderPath を渡す
-            // （cwd がサブディレクトリの場合、targetPath ではウィンドウが特定できない）
             let folderPath = window.folderPaths.first { fp in
                 fp == targetPath || targetPath.hasPrefix(fp + "/")
             } ?? targetPath
+            dlog("マッチ id=\(window.id) title=\(window.title) folderPath=\(folderPath)")
             let focused = VSCodeIPCClient.focusWindow(folderPath: folderPath, socketPath: entry.socketPath)
-            Log.focus.debug("VSCodeIPC: launch.start result=\(focused)")
+            dlog("launch.start result=\(focused)")
             return focused
         }
         return false
