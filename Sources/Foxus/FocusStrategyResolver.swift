@@ -57,14 +57,14 @@ public enum FocusStrategyResolver {
             return .kitty(cwd: cwd)
         }
 
-        // 6. VSCode（環境変数による検出）
-        if isVSCodeEnvironment(callerApp: nil, env: env) {
-            return .vscode(cwd: cwd)
-        }
-
-        // 7. IntelliJ/JetBrains（環境変数による検出）
-        if isIntelliJEnvironment(callerApp: nil, env: env) {
-            return .intellij(cwd: cwd)
+        // 6. VSCode（callerApp 未指定時のみ環境変数で検出）
+        if callerApp == nil || callerApp?.isEmpty == true {
+            if isVSCodeEnvironment(callerApp: nil, env: env) {
+                return .vscode(cwd: cwd)
+            }
+            if isIntelliJEnvironment(callerApp: nil, env: env) {
+                return .intellij(cwd: cwd)
+            }
         }
 
         // 8. 汎用（callerAppからバンドルIDを解決）

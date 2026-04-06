@@ -108,14 +108,24 @@ struct FocusStrategyResolverTests {
         #expect(strategy == .tmux(cwd: "/path/to/project"))
     }
 
-    @Test("TMUX環境変数があればcallerAppに関わらずtmux戦略")
-    func tmuxIgnoresCallerApp() {
+    @Test("callerAppがエディタ以外ならTMUXが優先")
+    func tmuxOverNonEditorCallerApp() {
+        let strategy = FocusStrategyResolver.determine(
+            callerApp: "ghostty",
+            cwd: nil,
+            env: ["TMUX": "/tmp/tmux.sock,1,0"]
+        )
+        #expect(strategy == .tmux(cwd: nil))
+    }
+
+    @Test("callerAppがvscodeならTMUXよりVSCodeが優先")
+    func vscodeOverTmux() {
         let strategy = FocusStrategyResolver.determine(
             callerApp: "vscode",
             cwd: nil,
             env: ["TMUX": "/tmp/tmux.sock,1,0"]
         )
-        #expect(strategy == .tmux(cwd: nil))
+        #expect(strategy == .vscode(cwd: nil))
     }
 
     // MARK: VSCode
@@ -150,14 +160,16 @@ struct FocusStrategyResolverTests {
         #expect(strategy == .vscode(cwd: nil))
     }
 
-    @Test("callerAppがghosttyならVSCode環境変数があってもVSCodeではない")
-    func ghosttyNotVSCode() {
+    @Test("callerAppが非エディタでもVSCode環境変数があればVSCode戦略")
+    func vscodeFromEnvWithNonEditorCaller() {
+        // callerApp="ghostty" はエディタではないので callerApp 優先を通過し、
+        // 環境変数の VSCODE_GIT_IPC_HANDLE で VSCode と判定される
         let strategy = FocusStrategyResolver.determine(
             callerApp: "ghostty",
             cwd: nil,
             env: ["VSCODE_GIT_IPC_HANDLE": "/tmp/vscode-git-abc123.sock"]
         )
-        #expect(strategy != .vscode(cwd: nil))
+        #expect(strategy == .generic(bundleId: "com.mitchellh.ghostty", cwd: nil))
     }
 
     // MARK: IntelliJ
