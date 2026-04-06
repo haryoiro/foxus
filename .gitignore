@@ -1,4 +1,12 @@
+# Swift / SPM
 .build/
 .swiftpm/
 *.o
 *.d
+DerivedData/
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/

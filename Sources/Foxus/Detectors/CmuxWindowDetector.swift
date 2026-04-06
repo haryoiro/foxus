@@ -70,10 +70,19 @@ public enum CmuxWindowDetector {
 
         Log.focus.debug("restoreSurface: surfaceId=\(surfaceId, privacy: .public), socket=\(socketPath, privacy: .public)")
 
-        // JSON-RPC で surface.focus を送信
-        let request = "{\"id\":\"pyokotify\",\"method\":\"surface.focus\",\"params\":{\"surface_id\":\"\(surfaceId)\"}}\n"
+        // JSON-RPC で surface.focus を送信（JSONSerialization でインジェクション防止）
+        let payload: [String: Any] = [
+            "id": "foxus",
+            "method": "surface.focus",
+            "params": ["surface_id": surfaceId]
+        ]
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: payload),
+              let jsonString = String(data: jsonData, encoding: .utf8) else {
+            Log.focus.error("restoreSurface: JSON シリアライズ失敗")
+            return
+        }
 
-        sendSocketMessage(socketPath: socketPath, message: request)
+        sendSocketMessage(socketPath: socketPath, message: jsonString + "\n")
     }
 
     /// ソケットパスを解決
@@ -102,13 +111,20 @@ public enum CmuxWindowDetector {
 
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
-        withUnsafeMutablePointer(to: &addr.sun_path) { pathPtr in
-            let bound = pathPtr.withMemoryRebound(to: CChar.self, capacity: 104) { ptr in
-                socketPath.withCString { cstr in
-                    strncpy(ptr, cstr, 104)
+
+        // ソケットパスが sun_path の容量を超えていないかチェック
+        let sunPathCapacity = MemoryLayout.size(ofValue: addr.sun_path)
+        guard socketPath.utf8.count < sunPathCapacity else {
+            Log.focus.error("sendSocketMessage: ソケットパスが長すぎます (\(socketPath.utf8.count) bytes)")
+            return
+        }
+
+        _ = socketPath.withCString { cstr in
+            withUnsafeMutablePointer(to: &addr.sun_path) { pathPtr in
+                pathPtr.withMemoryRebound(to: CChar.self, capacity: sunPathCapacity) { ptr in
+                    strncpy(ptr, cstr, sunPathCapacity)
                 }
             }
-            _ = bound
         }
 
         let connectResult = withUnsafePointer(to: &addr) { addrPtr in

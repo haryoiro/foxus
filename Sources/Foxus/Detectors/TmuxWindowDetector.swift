@@ -181,13 +181,18 @@ public enum TmuxWindowDetector {
         let base = baseArgs()
 
         // ペインが所属するウィンドウに切替
+        // 期待フォーマット: "session_name:window_index" (例: "main:0", "dev:3")
         let displayArgs = base + ["display-message", "-t", paneId, "-p", "#{session_name}:#{window_index}"]
         if let target = ProcessUtils.runCommand(tmux, arguments: displayArgs)?
             .trimmingCharacters(in: .whitespacesAndNewlines),
-            !target.isEmpty {
+            !target.isEmpty,
+            target.contains(":"),
+            target.split(separator: ":").count == 2 {
             Log.focus.debug("  -> select-window -t \(target, privacy: .public)")
             let selectWindowArgs = base + ["select-window", "-t", target]
             _ = ProcessUtils.runCommand(tmux, arguments: selectWindowArgs)
+        } else {
+            Log.focus.warning("restoreTmuxPane: display-message 出力が不正なフォーマットです")
         }
 
         // ペインを選択

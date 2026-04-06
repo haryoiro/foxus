@@ -219,29 +219,48 @@ public enum ProcessUtils {
         process.executableURL = URL(fileURLWithPath: path)
         process.arguments = arguments
 
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = FileHandle.nullDevice
+        let stdoutPipe = Pipe()
+        let stderrPipe = Pipe()
+        process.standardOutput = stdoutPipe
+        process.standardError = stderrPipe
 
         // 出力を非同期で収集（パイプバッファ溢れ防止）
         var outputData = Data()
+        var errorData = Data()
         let readQueue = DispatchQueue(label: "ProcessUtils.runCommand.read")
-        pipe.fileHandleForReading.readabilityHandler = { handle in
+        stdoutPipe.fileHandleForReading.readabilityHandler = { handle in
             let data = handle.availableData
             readQueue.sync { outputData.append(data) }
+        }
+        stderrPipe.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            readQueue.sync { errorData.append(data) }
         }
 
         do {
             try process.run()
             process.waitUntilExit()
 
-            pipe.fileHandleForReading.readabilityHandler = nil
-            let remaining = pipe.fileHandleForReading.readDataToEndOfFile()
-            readQueue.sync { outputData.append(remaining) }
+            stdoutPipe.fileHandleForReading.readabilityHandler = nil
+            stderrPipe.fileHandleForReading.readabilityHandler = nil
+            let remaining = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+            let remainingErr = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+            readQueue.sync {
+                outputData.append(remaining)
+                errorData.append(remainingErr)
+            }
+
+            if process.terminationStatus != 0,
+               let stderrStr = String(data: errorData, encoding: .utf8),
+               !stderrStr.isEmpty {
+                Log.focus.warning("runCommand: \(path, privacy: .public) exited with \(process.terminationStatus): \(stderrStr, privacy: .public)")
+            }
 
             return String(data: outputData, encoding: .utf8)
         } catch {
-            pipe.fileHandleForReading.readabilityHandler = nil
+            stdoutPipe.fileHandleForReading.readabilityHandler = nil
+            stderrPipe.fileHandleForReading.readabilityHandler = nil
+            Log.focus.error("runCommand: \(path, privacy: .public) 起動失敗: \(error.localizedDescription, privacy: .public)")
             return nil
         }
     }

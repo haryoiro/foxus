@@ -8,12 +8,19 @@ on:
 
 jobs:
   build:
-    runs-on: macos-15
+    strategy:
+      matrix:
+        include:
+          - os: macos-14
+            xcode: "15.4"
+          - os: macos-15
+            xcode: "16.2"
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+        run: sudo xcode-select -s /Applications/Xcode_${{ matrix.xcode }}.app
 
       - name: Show Swift version
         run: swift --version

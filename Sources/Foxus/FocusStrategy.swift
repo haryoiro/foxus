@@ -24,3 +24,15 @@ public enum FocusStrategy: Equatable {
     /// 最終フォールバック: frontmostApplicationに戻す
     case fallback
 }
+
+/// フォーカス失敗の原因
+public enum FocusError: Error, Equatable {
+    /// アプリが起動していない
+    case appNotRunning(strategy: FocusStrategy)
+    /// ウィンドウが見つからない（アプリは起動しているがcwdに一致するウィンドウがない）
+    case windowNotFound(strategy: FocusStrategy)
+    /// 戦略を決定できなかった（callerApp/cwd/環境変数すべて不明）
+    case noStrategyAvailable
+    /// Detector がフォーカスに失敗した（原因不明）
+    case focusFailed(strategy: FocusStrategy)
+}

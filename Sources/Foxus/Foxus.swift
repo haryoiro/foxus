@@ -54,7 +54,7 @@ public enum Foxus {
     ///   - callerApp: 呼び出し元アプリ（省略時は自動検出）
     ///   - cwd: 作業ディレクトリ（省略時は自動検出）
     ///   - env: 環境変数辞書（デフォルト: ProcessInfo.processInfo.environment）
-    /// - Returns: 採用された戦略と成否
+    /// - Returns: 採用された戦略と成否（失敗時はエラー原因を含む）
     @discardableResult
     public static func focus(
         callerApp: String? = nil,
@@ -64,8 +64,14 @@ public enum Foxus {
         let resolved = callerApp ?? ProcessDetector.detectTerminalApp(env: env)
         let resolvedCwd = cwd ?? ProcessUtils.getCwdFromCurrentTty() ?? ProcessUtils.getParentCwd()
         let strategy = FocusStrategyResolver.determine(callerApp: resolved, cwd: resolvedCwd, env: env)
+
+        if case .fallback = strategy {
+            return FocusResult(strategy: strategy, succeeded: false, error: .noStrategyAvailable)
+        }
+
         let succeeded = execute(strategy: strategy)
-        return FocusResult(strategy: strategy, succeeded: succeeded)
+        let error: FocusError? = succeeded ? nil : .focusFailed(strategy: strategy)
+        return FocusResult(strategy: strategy, succeeded: succeeded, error: error)
     }
 
     // MARK: - Private
@@ -113,4 +119,12 @@ public struct FocusResult {
     public let strategy: FocusStrategy
     /// フォーカスに成功したかどうか
     public let succeeded: Bool
+    /// 失敗時のエラー原因（成功時はnil）
+    public let error: FocusError?
+
+    public init(strategy: FocusStrategy, succeeded: Bool, error: FocusError? = nil) {
+        self.strategy = strategy
+        self.succeeded = succeeded
+        self.error = error
+    }
 }

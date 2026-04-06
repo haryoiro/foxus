@@ -396,6 +396,44 @@ struct FocusResultTests {
         let result = FocusResult(strategy: .fallback, succeeded: false)
         #expect(result.strategy == .fallback)
         #expect(result.succeeded == false)
+        #expect(result.error == nil)
+    }
+
+    @Test("FocusResultがエラー原因を保持する")
+    func focusResultHoldsError() {
+        let result = FocusResult(strategy: .fallback, succeeded: false, error: .noStrategyAvailable)
+        #expect(result.succeeded == false)
+        #expect(result.error == .noStrategyAvailable)
+    }
+
+    @Test("FocusResultが成功時はerrorがnil")
+    func focusResultSuccessNoError() {
+        let result = FocusResult(strategy: .tmux(cwd: "/tmp"), succeeded: true)
+        #expect(result.succeeded == true)
+        #expect(result.error == nil)
+    }
+}
+
+// MARK: - FocusError Tests
+
+@Suite("FocusError Tests")
+struct FocusErrorTests {
+
+    @Test("FocusErrorが戦略情報を保持する")
+    func focusErrorCarriesStrategy() {
+        let error = FocusError.focusFailed(strategy: .tmux(cwd: "/project"))
+        if case .focusFailed(let strategy) = error {
+            #expect(strategy == .tmux(cwd: "/project"))
+        } else {
+            Issue.record("Expected .focusFailed")
+        }
+    }
+
+    @Test("各エラーケースが区別可能")
+    func errorCasesAreDistinct() {
+        let strategy = FocusStrategy.vscode(cwd: "/project")
+        #expect(FocusError.appNotRunning(strategy: strategy) != FocusError.windowNotFound(strategy: strategy))
+        #expect(FocusError.noStrategyAvailable != FocusError.focusFailed(strategy: strategy))
     }
 }
 
