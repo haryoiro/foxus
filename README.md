@@ -44,16 +44,14 @@ if !result.succeeded {
 
 ### VSCode ターミナルタブフォーカス（※）
 
-複数のターミナルタブがある場合、正しいタブまで自動フォーカスします。以下の設定を推奨します:
+複数のターミナルタブがある場合、正しいタブまで自動フォーカスします。
+
+タブタイトルの設定を変更するとタブ特定の精度が上がります。
 
 ```jsonc
 // settings.json
-{
-  "terminal.integrated.tabs.title": "${sequence}${separator}${process}"
-}
+{ "terminal.integrated.tabs.title": "${sequence}${separator}${process}" }
 ```
-
-設定がなくても動作しますが、タブの特定精度が下がります。
 
 ## strategy を明示する
 
