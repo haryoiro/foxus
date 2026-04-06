@@ -250,9 +250,22 @@ public enum VSCodeWindowDetector {
             let folderPath = window.folderPaths.first { fp in
                 fp == targetPath || targetPath.hasPrefix(fp + "/")
             } ?? targetPath
-            dlog("マッチ id=\(window.id) title=\(window.title) folderPath=\(folderPath)")
+            dlog("マッチ id=\(window.id) pid=\(window.pid) title=\(window.title) folderPath=\(folderPath)")
             let focused = VSCodeIPCClient.focusWindow(folderPath: folderPath, socketPath: entry.socketPath)
             dlog("launch.start result=\(focused)")
+
+            if focused {
+                // launch.start は VSCode 内部で非同期にウィンドウをキーにするため、
+                // 処理完了を待ってから OS レベルでアプリをアクティブ化する
+                Thread.sleep(forTimeInterval: 0.15)
+                let apps = NSRunningApplication.runningApplications(withBundleIdentifier: entry.bundleId)
+                // window.pid に対応するアプリを優先（Electron renderer）、なければ最初のメインプロセス
+                let targetApp = apps.first(where: { $0.processIdentifier == pid_t(window.pid) }) ?? apps.first
+                if let app = targetApp {
+                    let activated = app.activate(options: [.activateIgnoringOtherApps])
+                    dlog("activate(bundleId=\(entry.bundleId) pid=\(app.processIdentifier)) result=\(activated)")
+                }
+            }
             return focused
         }
         return false
