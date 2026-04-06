@@ -12,11 +12,26 @@ public enum FocusStrategyResolver {
     ///   - cwd: 作業ディレクトリ
     ///   - env: 環境変数辞書
     /// - Returns: 採用すべきフォーカス戦略
+    /// 環境情報からフォーカス戦略を決定
+    ///
+    /// callerApp が明示的にエディタを指定している場合はマルチプレクサより優先する。
+    /// これにより、cmux 内から開いた VSCode で callerApp="vscode" を指定すれば
+    /// VSCode のウィンドウにフォーカスできる。
     public static func determine(
         callerApp: String?,
         cwd: String?,
         env: [String: String]
     ) -> FocusStrategy {
+        // callerApp が明示的にエディタを指している場合、最優先で評価
+        if let caller = callerApp, !caller.isEmpty {
+            if isVSCodeEnvironment(callerApp: caller, env: [:]) {
+                return .vscode(cwd: cwd)
+            }
+            if isIntelliJEnvironment(callerApp: caller, env: [:]) {
+                return .intellij(cwd: cwd)
+            }
+        }
+
         // 1. cmux（タブ復元が必要なため、tmuxより先に判定）
         if env["CMUX_WORKSPACE_ID"] != nil {
             return .cmux(cwd: cwd)
@@ -42,13 +57,13 @@ public enum FocusStrategyResolver {
             return .kitty(cwd: cwd)
         }
 
-        // 6. VSCode
-        if isVSCodeEnvironment(callerApp: callerApp, env: env) {
+        // 6. VSCode（環境変数による検出）
+        if isVSCodeEnvironment(callerApp: nil, env: env) {
             return .vscode(cwd: cwd)
         }
 
-        // 7. IntelliJ/JetBrains
-        if isIntelliJEnvironment(callerApp: callerApp, env: env) {
+        // 7. IntelliJ/JetBrains（環境変数による検出）
+        if isIntelliJEnvironment(callerApp: nil, env: env) {
             return .intellij(cwd: cwd)
         }
 
