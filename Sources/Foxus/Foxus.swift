@@ -19,13 +19,18 @@ public enum Foxus {
 
     /// 戦略を指定してフォーカスを実行
     ///
-    /// - Parameter strategy: 採用するフォーカス戦略
+    /// - Parameters:
+    ///   - strategy: 採用するフォーカス戦略
+    ///   - env: 使用する環境変数（デフォルト: 現在のプロセス環境）
     /// - Returns: フォーカスに成功した場合はtrue
     @discardableResult
-    public static func execute(strategy: FocusStrategy) -> Bool {
+    public static func execute(
+        strategy: FocusStrategy,
+        env: [String: String] = ProcessInfo.processInfo.environment
+    ) -> Bool {
         switch strategy {
         case .cmux(let cwd):
-            return CmuxWindowDetector.focusCurrentWindow(cwd: cwd)
+            return CmuxWindowDetector.focusCurrentWindow(cwd: cwd, env: env)
         case .tmux(let cwd):
             return TmuxWindowDetector.focusCurrentWindow(cwd: cwd)
         case .zellij(let cwd):
@@ -41,7 +46,6 @@ public enum Foxus {
         case .generic(let bundleId, let cwd):
             return executeGeneric(bundleId: bundleId, cwd: cwd)
         case .fallback:
-            // 呼び出し元でフォールバック処理を行う
             return false
         }
     }
@@ -100,7 +104,7 @@ public enum Foxus {
             return FocusResult(strategy: strategy, succeeded: false, error: .noStrategyAvailable)
         }
 
-        let succeeded = execute(strategy: strategy)
+        let succeeded = execute(strategy: strategy, env: context.env)
         let error: FocusError? = succeeded ? nil : .focusFailed(strategy: strategy)
         return FocusResult(strategy: strategy, succeeded: succeeded, error: error)
     }

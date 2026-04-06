@@ -21,7 +21,14 @@ public enum CmuxWindowDetector {
     // MARK: - フォーカス復元
 
     /// cmuxアプリにフォーカスし、元のタブ（Surface）を復元
-    public static func focusCurrentWindow(cwd: String?) -> Bool {
+    ///
+    /// - Parameters:
+    ///   - cwd: 作業ディレクトリ
+    ///   - env: 保存済み環境変数（CMUX_SURFACE_ID, CMUX_SOCKET_PATH を含む）
+    public static func focusCurrentWindow(
+        cwd: String?,
+        env: [String: String] = ProcessInfo.processInfo.environment
+    ) -> Bool {
         Log.focus.debug("focusCurrentWindow(cmux): cwd=\(cwd ?? "nil", privacy: .public)")
 
         // cmuxアプリにフォーカス
@@ -31,7 +38,6 @@ public enum CmuxWindowDetector {
         for bundleId in bundleIds {
             let apps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId)
             if let app = apps.first {
-                // cwdでウィンドウマッチを試みる（フルパス → フォルダ名の順）
                 if let cwd = cwd,
                     WindowFocus.focusWindowInApp(app, matchingCwd: cwd) {
                     focused = true
@@ -48,21 +54,20 @@ public enum CmuxWindowDetector {
             return false
         }
 
-        // タブ（Surface）を復元
-        restoreSurface()
+        restoreSurface(env: env)
         return true
     }
 
     // MARK: - Private: タブ復元
 
     /// CMUX_SURFACE_IDを使ってソケットAPI経由でタブにフォーカス
-    private static func restoreSurface() {
-        guard let surfaceId = ProcessInfo.processInfo.environment["CMUX_SURFACE_ID"] else {
+    private static func restoreSurface(env: [String: String]) {
+        guard let surfaceId = env["CMUX_SURFACE_ID"] else {
             Log.focus.debug("restoreSurface: CMUX_SURFACE_ID 未設定")
             return
         }
 
-        let socketPath = resolveSocketPath()
+        let socketPath = resolveSocketPath(env: env)
         guard !socketPath.isEmpty else {
             Log.focus.warning("restoreSurface: ソケットパスが見つかりません")
             return
@@ -70,7 +75,6 @@ public enum CmuxWindowDetector {
 
         Log.focus.debug("restoreSurface: surfaceId=\(surfaceId, privacy: .public), socket=\(socketPath, privacy: .public)")
 
-        // JSON-RPC で surface.focus を送信（JSONSerialization でインジェクション防止）
         let payload: [String: Any] = [
             "id": "foxus",
             "method": "surface.focus",
@@ -86,12 +90,10 @@ public enum CmuxWindowDetector {
     }
 
     /// ソケットパスを解決
-    private static func resolveSocketPath() -> String {
-        // 環境変数を優先
-        if let path = ProcessInfo.processInfo.environment["CMUX_SOCKET_PATH"] {
+    private static func resolveSocketPath(env: [String: String]) -> String {
+        if let path = env["CMUX_SOCKET_PATH"] {
             return path
         }
-        // デフォルトパス
         let defaults = [
             "/tmp/cmux.sock",
             "/tmp/cmux-nightly.sock",
