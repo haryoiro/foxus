@@ -198,6 +198,37 @@ public enum ProcessUtils {
         return nil
     }
 
+    // MARK: - 祖先プロセス情報
+
+    /// 祖先プロセスを辿り、TTYを持つ最初のプロセスの `p_comm` を返す。
+    ///
+    /// VSCode統合ターミナルでは、フォアグラウンドプロセスの `p_comm` が
+    /// タブタイトルの `${process}` に使われる。
+    /// Claude Code の場合 `"2.1.92"` のようなバージョン文字列が返る。
+    public static func getAncestorPComm() -> String? {
+        var pid = getpid()
+        for _ in 0..<10 {
+            var info = kinfo_proc()
+            var size = MemoryLayout<kinfo_proc>.size
+            var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
+            guard sysctl(&mib, UInt32(mib.count), &info, &size, nil, 0) == 0 else { break }
+
+            if info.kp_eproc.e_tdev != -1 {
+                let name = withUnsafePointer(to: info.kp_proc.p_comm) { ptr in
+                    ptr.withMemoryRebound(to: CChar.self, capacity: Int(MAXCOMLEN)) { charPtr in
+                        String(cString: charPtr)
+                    }
+                }
+                return name.isEmpty ? nil : name
+            }
+
+            let ppid = info.kp_eproc.e_ppid
+            if ppid <= 1 { break }
+            pid = ppid
+        }
+        return nil
+    }
+
     // MARK: - バイナリ検索
 
     /// PATH環境変数とフォールバックパスからコマンドバイナリを検索

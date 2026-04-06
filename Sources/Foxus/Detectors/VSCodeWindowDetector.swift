@@ -22,6 +22,8 @@ public enum VSCodeWindowDetector {
         // 方法1: VSCode IPC ソケット経由でウィンドウを特定（タイトルマッチ不要）
         // folderURIs.path が cwd と完全一致するウィンドウを探す
         if let cwd = cwd, focusViaIPC(targetPath: cwd) {
+            // ウィンドウフォーカス成功 → ターミナルタブもフォーカス試行
+            _ = focusTerminalTab(bundleIds: bundleIds)
             return true
         }
 
@@ -31,6 +33,7 @@ public enum VSCodeWindowDetector {
             let projectName = (pluginPwd as NSString).lastPathComponent
             if !projectName.isEmpty,
                WindowFocus.focusWindowByTitle(projectName, bundleIds: bundleIds) {
+                _ = focusTerminalTab(bundleIds: bundleIds)
                 return true
             }
         }
@@ -40,6 +43,7 @@ public enum VSCodeWindowDetector {
             let projectName = (cwd as NSString).lastPathComponent
             if !projectName.isEmpty,
                WindowFocus.focusWindowByTitle(projectName, bundleIds: bundleIds) {
+                _ = focusTerminalTab(bundleIds: bundleIds)
                 return true
             }
         }
@@ -48,6 +52,7 @@ public enum VSCodeWindowDetector {
         // 例: /path/to/myrepo/.worktrees/feature/branch → "myrepo" でウィンドウを検索
         if let cwd = cwd, let parentRepoName = extractWorktreeParentName(from: cwd) {
             if WindowFocus.focusWindowByTitle(parentRepoName, bundleIds: bundleIds) {
+                _ = focusTerminalTab(bundleIds: bundleIds)
                 return true
             }
         }
@@ -55,11 +60,124 @@ public enum VSCodeWindowDetector {
         // 方法5: TTY からシェルの cwd を取得してウィンドウタイトルを推測
         if let windowTitle = ProcessUtils.detectWindowTitleFromTty(),
            WindowFocus.focusWindowByTitle(windowTitle, bundleIds: bundleIds) {
+            _ = focusTerminalTab(bundleIds: bundleIds)
             return true
         }
 
         // 方法6: フォールバック — ウィンドウ特定を諦め、アプリ全体をアクティブ化
         return WindowFocus.focusAnyApp(bundleIds: bundleIds)
+    }
+
+    // MARK: - ターミナルタブフォーカス（Accessibility API）
+
+    /// AXツリーからターミナルタブを検索し、祖先プロセスの `p_comm` にマッチするタブをフォーカスする。
+    ///
+    /// 前提条件:
+    /// - VSCode の `terminal.integrated.tabs.title` に `${sequence}` または `${process}` を含む設定が必要
+    /// - `AXEnhancedUserInterface` を一時的に有効化してChromiumのAXツリーを展開する
+    ///
+    /// タブの `AXDescription` は `"ターミナル {N} {title}"` 形式で、
+    /// `{title}` にフォアグラウンドプロセスの `p_comm` が含まれる。
+    private static func focusTerminalTab(bundleIds: [String]) -> Bool {
+        guard let pcomm = ProcessUtils.getAncestorPComm(), !pcomm.isEmpty else {
+            Log.focus.debug("VSCodeTerminalTab: 祖先 p_comm 取得失敗")
+            return false
+        }
+
+        // シェル名の場合はマッチの精度が低いためスキップ
+        let shellNames: Set<String> = ["zsh", "bash", "fish", "sh", "dash", "tcsh", "ksh"]
+        if shellNames.contains(pcomm) {
+            Log.focus.debug("VSCodeTerminalTab: p_comm がシェル名 (\(pcomm, privacy: .public))、タブマッチをスキップ")
+            return false
+        }
+
+        Log.focus.debug("VSCodeTerminalTab: p_comm=\(pcomm, privacy: .public) でタブ検索")
+
+        for bundleId in bundleIds {
+            let apps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId)
+            for app in apps {
+                if let result = focusTerminalTabInApp(app, pcomm: pcomm) {
+                    return result
+                }
+            }
+        }
+        return false
+    }
+
+    /// 指定アプリのAXツリーでターミナルタブを検索・フォーカスする。
+    private static func focusTerminalTabInApp(_ app: NSRunningApplication, pcomm: String) -> Bool? {
+        let axApp = AXUIElementCreateApplication(app.processIdentifier)
+
+        // ChromiumのAXツリーを展開
+        AXUIElementSetAttributeValue(axApp, "AXEnhancedUserInterface" as CFString, true as CFTypeRef)
+        defer {
+            AXUIElementSetAttributeValue(axApp, "AXEnhancedUserInterface" as CFString, false as CFTypeRef)
+        }
+
+        // AXツリー展開に時間がかかるため待機
+        Thread.sleep(forTimeInterval: 3.0)
+
+        var windowsRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &windowsRef) == .success,
+              let windows = windowsRef as? [AXUIElement]
+        else { return nil }
+
+        for window in windows {
+            var tabs: [(desc: String, element: AXUIElement)] = []
+            collectTerminalTabs(window, depth: 0, results: &tabs)
+
+            guard !tabs.isEmpty else { continue }
+
+            // p_comm にマッチするタブを検索
+            for tab in tabs where tab.desc.contains(pcomm) {
+                Log.focus.debug("VSCodeTerminalTab: マッチ: \(tab.desc, privacy: .public)")
+
+                // 子要素の monaco-icon-label を AXPress でクリック
+                var childrenRef: CFTypeRef?
+                guard AXUIElementCopyAttributeValue(tab.element, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+                      let children = childrenRef as? [AXUIElement],
+                      let iconLabel = children.first
+                else { continue }
+
+                let result = AXUIElementPerformAction(iconLabel, kAXPressAction as CFString)
+                Log.focus.debug("VSCodeTerminalTab: AXPress result=\(result == .success)")
+                return result == .success
+            }
+        }
+        return nil
+    }
+
+    /// AXツリーを再帰探索してターミナルタブ要素を収集する。
+    ///
+    /// ターミナルタブは `AXDOMClassList` に `monaco-list-row` を含み、
+    /// `AXDescription` が `"ターミナル"` で始まる `AXGroup` 要素。
+    private static func collectTerminalTabs(
+        _ element: AXUIElement,
+        depth: Int,
+        results: inout [(desc: String, element: AXUIElement)]
+    ) {
+        if depth > 40 { return }
+
+        var descRef: CFTypeRef?
+        AXUIElementCopyAttributeValue(element, kAXDescriptionAttribute as CFString, &descRef)
+        let desc = descRef as? String ?? ""
+
+        var clsRef: CFTypeRef?
+        AXUIElementCopyAttributeValue(element, "AXDOMClassList" as CFString, &clsRef)
+        let cls = (clsRef as? [String] ?? []).joined(separator: " ")
+
+        if cls.contains("monaco-list-row") && desc.contains("ターミナル") {
+            results.append((desc: desc, element: element))
+        }
+
+        var childrenRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &childrenRef) == .success,
+              let children = childrenRef as? [AXUIElement]
+        else { return }
+
+        for child in children {
+            collectTerminalTabs(child, depth: depth + 1, results: &results)
+        }
     }
 
     // MARK: - IPC ソケット経由フォーカス

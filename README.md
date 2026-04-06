@@ -38,9 +38,25 @@ if !result.succeeded {
 | zellij | `$ZELLIJ` | `zellij action focus-pane-with-id` |
 | WezTerm | `$WEZTERM_PANE` | `wezterm cli focus-pane` |
 | kitty | `$KITTY_WINDOW_ID` | `kitten @ focus-window` |
-| VSCode / Cursor | `$VSCODE_GIT_IPC_HANDLE` など | AX API |
+| VSCode / Cursor | `$VSCODE_GIT_IPC_HANDLE` など | IPC + AX API（※） |
 | JetBrains IDE | `$TERMINAL_EMULATOR` など | AX API |
 | その他ターミナル | プロセスツリー自動検出 | AX API |
+
+### VSCode ターミナルタブフォーカス
+
+VSCode で複数のターミナルタブを開いている場合、foxus はウィンドウだけでなく正しいターミナルタブまでフォーカスを試みます。
+
+この機能はフォアグラウンドプロセスの名前（`p_comm`）でタブを特定します。Claude Code のようにユニークなプロセス名を持つアプリケーションから呼ばれた場合は高い精度で動作しますが、素の `zsh` / `bash` が複数ある場合は区別できないためスキップされます。
+
+精度を上げるには、VSCode の `settings.json` に以下を追加してください:
+
+```jsonc
+{
+  "terminal.integrated.tabs.title": "${sequence}${separator}${process}"
+}
+```
+
+この設定により、アプリケーションが設定したターミナルタイトル（`${sequence}`）がタブ名に反映され、タブの一意特定が容易になります。設定がなくてもウィンドウレベルのフォーカスは従来通り動作します。
 
 ## strategy を明示する
 
