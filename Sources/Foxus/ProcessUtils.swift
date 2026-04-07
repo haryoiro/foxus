@@ -281,6 +281,18 @@ public enum ProcessUtils {
         return nil
     }
 
+    // MARK: - プロセス生存確認
+
+    /// 指定PIDのプロセスが生きているかを確認
+    ///
+    /// `kill(pid, 0)` でシグナル送信を試み、成功すれば alive。
+    /// `EPERM`（権限不足）の場合もプロセスは存在するため alive 扱い。
+    /// `ESRCH` の場合のみプロセスが存在しない。
+    public static func isProcessAlive(_ pid: pid_t) -> Bool {
+        if kill(pid, 0) == 0 { return true }
+        return errno != ESRCH   // EPERM → 存在するが権限なし → alive
+    }
+
     // MARK: - バイナリ検索
 
     /// PATH環境変数とフォールバックパスからコマンドバイナリを検索
