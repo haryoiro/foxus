@@ -41,6 +41,8 @@ public enum Foxus {
             return WeztermWindowDetector.focusCurrentWindow(cwd: cwd)
         case .kitty(let cwd):
             return KittyWindowDetector.focusCurrentWindow(cwd: cwd)
+        case .ghostty(let cwd):
+            return GhosttyWindowDetector.focusCurrentWindow(cwd: cwd)
         case .vscode(let cwd):
             return VSCodeWindowDetector.focusCurrentWindow(cwd: cwd, env: env)
         case .intellij(let cwd):

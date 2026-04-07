@@ -67,7 +67,12 @@ public enum FocusStrategyResolver {
             return .kitty(cwd: cwd)
         }
 
-        // 6. IntelliJ（callerApp 未指定時のみ環境変数で検出）
+        // 6. Ghostty
+        if env["TERM_PROGRAM"] == "ghostty" || env["GHOSTTY_RESOURCES_DIR"] != nil {
+            return .ghostty(cwd: cwd)
+        }
+
+        // 7. IntelliJ（callerApp 未指定時のみ環境変数で検出）
         if callerApp == nil || callerApp?.isEmpty == true {
             if isIntelliJEnvironment(callerApp: nil, env: env) {
                 return .intellij(cwd: cwd)
