@@ -9,30 +9,24 @@ import Foundation
 ///
 /// フォーカス復元は `wezterm cli focus-pane --pane-id` コマンドで行う。
 /// （Unix socketに直接JSON-RPCを送ることも可能だが、CLIの方が安定している）
-public enum WeztermWindowDetector {
+public enum WeztermWindowDetector: FocusDetector {
+
+    /// FocusDetector プロトコル準拠: env は無視して cwd のみ使用
+    public static func focusCurrentWindow(cwd: String?, env: [String: String]) -> Bool {
+        focusCurrentWindow(cwd: cwd)
+    }
+
 
     // MARK: - フォーカス復元
 
     /// WezTermにフォーカスし、元のペインを復元
     public static func focusCurrentWindow(cwd: String?) -> Bool {
         Log.focus.debug("focusCurrentWindow(wezterm): cwd=\(cwd ?? "nil", privacy: .public)")
-
-        // WezTermアプリにフォーカス
-        let bundleIds = ["com.github.wez.wezterm"]
-        let apps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleIds[0])
-        if let app = apps.first {
-            if let cwd = cwd {
-                _ = WindowFocus.focusWindowInApp(app, matchingCwd: cwd)
-            }
-            app.activate(options: [.activateIgnoringOtherApps])
-        } else {
-            Log.focus.warning("focusCurrentWindow(wezterm): WezTermアプリが見つかりません")
-            return false
-        }
-
-        // ペインを復元
-        restorePane()
-        return true
+        return WindowFocus.focusTerminalApp(
+            bundleId: "com.github.wez.wezterm",
+            cwd: cwd,
+            afterFocus: { restorePane() }
+        )
     }
 
     // MARK: - Private
@@ -45,11 +39,7 @@ public enum WeztermWindowDetector {
             return
         }
 
-        guard let weztermPath = ProcessUtils.findBinary("wezterm", fallbacks: [
-            "/opt/homebrew/bin/wezterm",
-            "/usr/local/bin/wezterm",
-            "/Applications/WezTerm.app/Contents/MacOS/wezterm"
-        ]) else {
+        guard let weztermPath = BinaryPaths.wezterm() else {
             Log.focus.warning("restorePane(wezterm): wezterm バイナリが見つかりません")
             return
         }

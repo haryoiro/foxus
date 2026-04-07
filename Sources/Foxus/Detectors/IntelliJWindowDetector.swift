@@ -3,7 +3,13 @@ import ApplicationServices
 import Foundation
 
 /// IntelliJ/JetBrains IDEウィンドウを特定するためのユーティリティ
-public enum IntelliJWindowDetector {
+public enum IntelliJWindowDetector: FocusDetector {
+
+    /// FocusDetector プロトコル準拠: env は無視して cwd のみ使用
+    public static func focusCurrentWindow(cwd: String?, env: [String: String]) -> Bool {
+        focusCurrentWindow(cwd: cwd)
+    }
+
 
     /// JetBrains製品のバンドルID一覧
     private static var bundleIds: [String] { BundleIDRegistry.jetBrainsBundleIds }

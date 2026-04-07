@@ -11,7 +11,7 @@ import Foundation
 /// 4. worktree の親リポジトリ名マッチ（cwd が `.worktrees/` を含む場合）
 /// 5. TTY からウィンドウタイトルを推測
 /// 6. フォールバック: VSCode アプリ全体をアクティブ化
-public enum VSCodeWindowDetector {
+public enum VSCodeWindowDetector: FocusDetector {
 
     private static var bundleIds: [String] { BundleIDRegistry.vscodeBundleIds }
 

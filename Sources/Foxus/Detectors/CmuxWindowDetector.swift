@@ -10,7 +10,7 @@ import Foundation
 /// 1. CMUX_WORKSPACE_ID でcmux環境を判定
 /// 2. cmuxアプリにフォーカス
 /// 3. CMUX_SOCKET_PATH + CMUX_SURFACE_ID でソケットAPI経由でタブ復元
-public enum CmuxWindowDetector {
+public enum CmuxWindowDetector: FocusDetector {
 
     // MARK: - cmux環境検出
 

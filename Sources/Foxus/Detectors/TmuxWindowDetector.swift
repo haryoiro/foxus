@@ -12,7 +12,13 @@ import Foundation
 /// 2. `tmux list-clients`でクライアントPIDを取得
 /// 3. クライアントPIDから親プロセスツリーを辿りGUIターミナルを特定
 /// 4. クリック時は`tmux select-window` + `tmux select-pane`でペイン復元
-public enum TmuxWindowDetector {
+public enum TmuxWindowDetector: FocusDetector {
+
+    /// FocusDetector プロトコル準拠: env は無視して cwd のみ使用
+    public static func focusCurrentWindow(cwd: String?, env: [String: String]) -> Bool {
+        focusCurrentWindow(cwd: cwd)
+    }
+
 
     // MARK: - tmux環境検出
 
@@ -121,11 +127,7 @@ public enum TmuxWindowDetector {
 
     /// tmuxバイナリのパスを検索
     private static var tmuxPath: String? {
-        ProcessUtils.findBinary("tmux", fallbacks: [
-            "/opt/homebrew/bin/tmux",
-            "/usr/local/bin/tmux",
-            "/usr/bin/tmux"
-        ])
+        BinaryPaths.tmux()
     }
 
     // MARK: - Private: tmux環境変数

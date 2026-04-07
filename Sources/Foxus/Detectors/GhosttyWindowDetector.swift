@@ -9,7 +9,13 @@ import Foundation
 /// 検出環境変数:
 /// - `TERM_PROGRAM=ghostty`
 /// - `GHOSTTY_RESOURCES_DIR`
-public enum GhosttyWindowDetector {
+public enum GhosttyWindowDetector: FocusDetector {
+
+    /// FocusDetector プロトコル準拠: env は無視して cwd のみ使用
+    public static func focusCurrentWindow(cwd: String?, env: [String: String]) -> Bool {
+        focusCurrentWindow(cwd: cwd)
+    }
+
 
     private static let bundleId = "com.mitchellh.ghostty"
 

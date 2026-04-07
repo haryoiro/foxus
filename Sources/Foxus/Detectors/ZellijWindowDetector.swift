@@ -9,7 +9,13 @@ import Foundation
 /// - `ZELLIJ_PANE_ID`      : ペインID（数値）
 ///
 /// フォーカス復元は `zellij action focus-pane-with-id` コマンドで行う。
-public enum ZellijWindowDetector {
+public enum ZellijWindowDetector: FocusDetector {
+
+    /// FocusDetector プロトコル準拠: env は無視して cwd のみ使用
+    public static func focusCurrentWindow(cwd: String?, env: [String: String]) -> Bool {
+        focusCurrentWindow(cwd: cwd)
+    }
+
 
     // MARK: - フォーカス復元
 
@@ -19,13 +25,7 @@ public enum ZellijWindowDetector {
 
         // 実ターミナルアプリを特定してフォーカス
         if let bundleId = detectRealTerminalBundleId() {
-            let apps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId)
-            if let app = apps.first {
-                if let cwd = cwd {
-                    _ = WindowFocus.focusWindowInApp(app, matchingCwd: cwd)
-                }
-                app.activate(options: [.activateIgnoringOtherApps])
-            }
+            _ = WindowFocus.focusTerminalApp(bundleId: bundleId, cwd: cwd)
         }
 
         // ペインを復元
@@ -63,10 +63,7 @@ public enum ZellijWindowDetector {
             return
         }
 
-        guard let zellijPath = ProcessUtils.findBinary("zellij", fallbacks: [
-            "/opt/homebrew/bin/zellij",
-            "/usr/local/bin/zellij"
-        ]) else {
+        guard let zellijPath = BinaryPaths.zellij() else {
             Log.focus.warning("restorePane(zellij): zellij バイナリが見つかりません")
             return
         }

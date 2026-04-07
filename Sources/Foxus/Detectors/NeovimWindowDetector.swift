@@ -11,7 +11,7 @@ import Foundation
 ///
 /// **環境変数**:
 /// - `NVIM`: Neovim の RPC ソケットパス（`:terminal` 内で自動設定）
-public enum NeovimWindowDetector {
+public enum NeovimWindowDetector: FocusDetector {
 
     // MARK: - Public
 
@@ -37,11 +37,7 @@ public enum NeovimWindowDetector {
     // MARK: - Private: nvim バイナリ
 
     private static var nvimPath: String? {
-        ProcessUtils.findBinary("nvim", fallbacks: [
-            "/opt/homebrew/bin/nvim",
-            "/usr/local/bin/nvim",
-            "/usr/bin/nvim",
-        ])
+        BinaryPaths.nvim()
     }
 
     // MARK: - Private: ターミナルフォーカス委譲

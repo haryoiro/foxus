@@ -12,29 +12,24 @@ import Foundation
 ///
 /// 設定例 (~/.config/kitty/kitty.conf):
 ///   allow_remote_control yes
-public enum KittyWindowDetector {
+public enum KittyWindowDetector: FocusDetector {
+
+    /// FocusDetector プロトコル準拠: env は無視して cwd のみ使用
+    public static func focusCurrentWindow(cwd: String?, env: [String: String]) -> Bool {
+        focusCurrentWindow(cwd: cwd)
+    }
+
 
     // MARK: - フォーカス復元
 
     /// kittyにフォーカスし、元のウィンドウを復元
     public static func focusCurrentWindow(cwd: String?) -> Bool {
         Log.focus.debug("focusCurrentWindow(kitty): cwd=\(cwd ?? "nil", privacy: .public)")
-
-        // kittyアプリにフォーカス
-        let apps = NSRunningApplication.runningApplications(withBundleIdentifier: "net.kovidgoyal.kitty")
-        if let app = apps.first {
-            if let cwd = cwd {
-                _ = WindowFocus.focusWindowInApp(app, matchingCwd: cwd)
-            }
-            app.activate(options: [.activateIgnoringOtherApps])
-        } else {
-            Log.focus.warning("focusCurrentWindow(kitty): kittyアプリが見つかりません")
-            return false
-        }
-
-        // ウィンドウを復元
-        restoreWindow()
-        return true
+        return WindowFocus.focusTerminalApp(
+            bundleId: "net.kovidgoyal.kitty",
+            cwd: cwd,
+            afterFocus: { restoreWindow() }
+        )
     }
 
     // MARK: - Private
@@ -48,11 +43,7 @@ public enum KittyWindowDetector {
             return
         }
 
-        guard let kittyPath = ProcessUtils.findBinary("kitten", fallbacks: [
-            "/opt/homebrew/bin/kitten",
-            "/usr/local/bin/kitten",
-            "/Applications/kitty.app/Contents/MacOS/kitten"
-        ]) else {
+        guard let kittyPath = BinaryPaths.kitty() else {
             Log.focus.warning("restoreWindow(kitty): kitten バイナリが見つかりません")
             return
         }
