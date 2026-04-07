@@ -176,6 +176,32 @@ public enum WindowFocus {
         return false
     }
 
+    /// ターミナルアプリの共通フォーカスパターン
+    ///
+    /// 1. バンドルIDでアプリを検索
+    /// 2. cwd でウィンドウマッチ → アプリをアクティブ化
+    /// 3. afterFocus クロージャでペイン/ウィンドウ復元
+    ///
+    /// - Parameters:
+    ///   - bundleId: フォーカス対象アプリのバンドルID
+    ///   - cwd: 作業ディレクトリ（nil の場合はウィンドウマッチをスキップ）
+    ///   - afterFocus: アプリフォーカス後に実行する処理（ペイン復元など）
+    /// - Returns: アプリが見つかりフォーカスできた場合は true
+    @discardableResult
+    public static func focusTerminalApp(bundleId: String, cwd: String?, afterFocus: () -> Void = {}) -> Bool {
+        let apps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId)
+        guard let app = apps.first else {
+            Log.focus.warning("focusTerminalApp: アプリが見つかりません bundleId=\(bundleId, privacy: .public)")
+            return false
+        }
+        if let cwd = cwd {
+            _ = focusWindowInApp(app, matchingCwd: cwd)
+        }
+        app.activate(options: [.activateIgnoringOtherApps])
+        afterFocus()
+        return true
+    }
+
     /// 指定バンドルIDのいずれかのアプリにフォーカス
     @discardableResult
     public static func focusAnyApp(bundleIds: [String]) -> Bool {
