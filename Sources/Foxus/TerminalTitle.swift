@@ -170,7 +170,7 @@ public enum TerminalTitle {
         return parseTitle(response)
     }
 
-    private static func parseTitle(_ bytes: [UInt8]) -> String? {
+    static func parseTitle(_ bytes: [UInt8]) -> String? {
         guard let raw = String(bytes: bytes, encoding: .utf8) else { return nil }
         let pattern = "\u{1b}\\[21;(.+?)~"
         guard let regex = try? NSRegularExpression(pattern: pattern),

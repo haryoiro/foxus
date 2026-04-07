@@ -252,7 +252,7 @@ public enum VSCodeIPCClient {
 
     // MARK: - デシリアライゼーション
 
-    private static func decodeLEB128(_ data: Data, pos: inout Data.Index) -> Int? {
+    static func decodeLEB128(_ data: Data, pos: inout Data.Index) -> Int? {
         var n = 0; var shift = 0
         let maxShift = MemoryLayout<Int>.size * 8 - 1  // 63 on 64-bit
         while pos < data.endIndex {

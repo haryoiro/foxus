@@ -106,7 +106,7 @@ public enum GhosttyWindowDetector {
     }
 
     /// AppleScript 文字列リテラル用エスケープ
-    private static func escapeForAS(_ s: String) -> String {
+    static func escapeForAS(_ s: String) -> String {
         var result = ""
         for ch in s {
             switch ch {
