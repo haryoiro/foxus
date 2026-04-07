@@ -47,45 +47,45 @@ public enum FocusStrategyResolver {
             return .cmux(cwd: cwd)
         }
 
-        // 2. tmux
+        // 4. tmux
         if env["TMUX"] != nil {
             return .tmux(cwd: cwd)
         }
 
-        // 3. zellij
+        // 5. zellij
         if env["ZELLIJ"] != nil {
             return .zellij(cwd: cwd)
         }
 
-        // 4. WezTerm
+        // 6. WezTerm
         if env["WEZTERM_PANE"] != nil {
             return .wezterm(cwd: cwd)
         }
 
-        // 5. kitty
+        // 7. kitty
         if env["KITTY_WINDOW_ID"] != nil {
             return .kitty(cwd: cwd)
         }
 
-        // 6. Ghostty
+        // 8. Ghostty
         if env["TERM_PROGRAM"] == "ghostty" || env["GHOSTTY_RESOURCES_DIR"] != nil {
             return .ghostty(cwd: cwd)
         }
 
-        // 7. IntelliJ（callerApp 未指定時のみ環境変数で検出）
+        // 9. IntelliJ（callerApp 未指定時のみ環境変数で検出）
         if callerApp == nil || callerApp?.isEmpty == true {
             if isIntelliJEnvironment(callerApp: nil, env: env) {
                 return .intellij(cwd: cwd)
             }
         }
 
-        // 7. 汎用（callerAppからバンドルIDを解決）
+        // 10. 汎用（callerAppからバンドルIDを解決）
         let bundleId = resolveBundleId(callerApp)
         if bundleId != nil || cwd != nil {
             return .generic(bundleId: bundleId, cwd: cwd)
         }
 
-        // 9. フォールバック
+        // 11. フォールバック
         return .fallback
     }
 
@@ -97,12 +97,13 @@ public enum FocusStrategyResolver {
     ) -> Bool {
         if let caller = callerApp {
             let lower = caller.lowercased()
-            if lower.contains("vscode") { return true }
+            if lower.contains("vscode") || lower.contains("cursor") { return true }
             return false
         }
 
         if let termProgram = env["TERM_PROGRAM"] {
-            if termProgram.lowercased().contains("vscode") { return true }
+            let lower = termProgram.lowercased()
+            if lower.contains("vscode") || lower.contains("cursor") { return true }
             return false
         }
 
@@ -117,11 +118,7 @@ public enum FocusStrategyResolver {
         callerApp: String?,
         env: [String: String]
     ) -> Bool {
-        let jetBrainsNames = [
-            "idea", "intellij", "appcode", "clion", "webstorm",
-            "pycharm", "phpstorm", "goland", "rubymine", "rider",
-            "datagrip", "fleet"
-        ]
+        let jetBrainsNames = Set(BundleIDRegistry.jetBrainsIDEs.values)
 
         if let caller = callerApp?.lowercased() {
             for name in jetBrainsNames where caller.contains(name) { return true }

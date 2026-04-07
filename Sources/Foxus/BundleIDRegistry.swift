@@ -38,10 +38,11 @@ public enum BundleIDRegistry {
 
     // MARK: - VSCode
 
-    /// VSCode のバンドルID
+    /// VSCode（及び互換フォーク）のバンドルID
     public static let vscodeBundleIds: [String] = [
         "com.microsoft.VSCode",
-        "com.microsoft.VSCodeInsiders"
+        "com.microsoft.VSCodeInsiders",
+        "com.todesktop.230313mzl4w4u92"  // Cursor
     ]
 
     // MARK: - Terminals
@@ -57,6 +58,7 @@ public enum BundleIDRegistry {
     public static let terminalApps: [String: String] = [
         "com.microsoft.VSCode": "vscode",
         "com.microsoft.VSCodeInsiders": "vscode",
+        "com.todesktop.230313mzl4w4u92": "cursor",  // Cursor (VSCode fork)
         "dev.zed.Zed": "zed",
         "com.googlecode.iterm2": "iTerm.app",
         "com.apple.Terminal": "Apple_Terminal",
@@ -86,6 +88,8 @@ public enum BundleIDRegistry {
     public static let termProgramToBundleId: [String: String] = [
         "vscode": "com.microsoft.VSCode",
         "VSCode": "com.microsoft.VSCode",
+        "cursor": "com.todesktop.230313mzl4w4u92",
+        "Cursor": "com.todesktop.230313mzl4w4u92",
         "zed": "dev.zed.Zed",
         "iTerm.app": "com.googlecode.iterm2",
         "Apple_Terminal": "com.apple.Terminal",
