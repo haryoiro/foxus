@@ -252,14 +252,16 @@ public enum VSCodeIPCClient {
 
     // MARK: - デシリアライゼーション
 
-    private static func decodeLEB128(_ data: Data, pos: inout Data.Index) -> Int {
+    private static func decodeLEB128(_ data: Data, pos: inout Data.Index) -> Int? {
         var n = 0; var shift = 0
+        let maxShift = MemoryLayout<Int>.size * 8 - 1  // 63 on 64-bit
         while pos < data.endIndex {
+            guard shift <= maxShift else { return nil }
             let b = Int(data[pos]); pos = data.index(after: pos)
             n |= (b & 0x7F) << shift; shift += 7
-            if b & 0x80 == 0 { break }
+            if b & 0x80 == 0 { return n }
         }
-        return n
+        return nil
     }
 
     static func deserializeValue(_ data: Data, pos: inout Data.Index) -> Any? {
@@ -269,25 +271,25 @@ public enum VSCodeIPCClient {
         case 0x00:
             return nil
         case 0x01:  // String
-            let len = decodeLEB128(data, pos: &pos)
+            guard let len = decodeLEB128(data, pos: &pos) else { return nil }
             let end = data.index(pos, offsetBy: len, limitedBy: data.endIndex) ?? data.endIndex
             let str = String(data: data[pos..<end], encoding: .utf8) ?? ""
             pos = end
             return str
         case 0x04:  // Array
-            let count = decodeLEB128(data, pos: &pos)
+            guard let count = decodeLEB128(data, pos: &pos) else { return nil }
             var items = [Any]()
             for _ in 0..<count {
                 items.append(deserializeValue(data, pos: &pos) as Any)
             }
             return items
         case 0x05:  // Object (JSON)
-            let len = decodeLEB128(data, pos: &pos)
+            guard let len = decodeLEB128(data, pos: &pos) else { return nil }
             let end = data.index(pos, offsetBy: len, limitedBy: data.endIndex) ?? data.endIndex
             let jsonData = data[pos..<end]; pos = end
             return (try? JSONSerialization.jsonObject(with: jsonData)) as Any?
         case 0x06:  // UInt (LEB128)
-            return decodeLEB128(data, pos: &pos)
+            return decodeLEB128(data, pos: &pos) as Any?
         default:
             Log.focus.warning("VSCodeIPC: unknown type byte \(typ, privacy: .public)")
             return nil
