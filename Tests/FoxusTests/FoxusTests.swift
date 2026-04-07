@@ -283,7 +283,8 @@ struct ProcessDetectorTests {
         let result = ProcessDetector.detectTerminalApp(env: ["TERM_PROGRAM": "ghostty"])
         // プロセスツリーで実際のGUIアプリが見つかる場合もあるので
         // TERM_PROGRAMの値か、別のターミナルアプリ名が返ることを確認
-        #expect(result != nil || result == nil)  // 実行環境依存のため存在確認のみ
+        #expect(result != nil)
+        if let result { #expect(!result.isEmpty) }
     }
 
     @Test("cmux環境ではTERM_PROGRAM=ghosttyでもcmuxを返す")
@@ -296,7 +297,8 @@ struct ProcessDetectorTests {
         ])
         // 実行環境によってプロセスツリーで別アプリが検出される場合があるため
         // cmux または nil または別のアプリ名のいずれかが返ることを確認
-        #expect(result == "cmux" || result != "cmux")
+        #expect(result != nil)
+        if let result { #expect(!result.isEmpty) }
     }
 }
 

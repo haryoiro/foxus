@@ -336,8 +336,12 @@ public enum ProcessUtils {
             try process.run()
             process.waitUntilExit()
 
+            // 1. ハンドラを解除して新規コールバックを停止
             stdoutPipe.fileHandleForReading.readabilityHandler = nil
             stderrPipe.fileHandleForReading.readabilityHandler = nil
+            // 2. readQueue でバリア同期し、実行中のハンドラ完了を待つ
+            readQueue.sync {}
+            // 3. パイプに残っているデータを読み取る
             let remaining = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
             let remainingErr = stderrPipe.fileHandleForReading.readDataToEndOfFile()
             readQueue.sync {
