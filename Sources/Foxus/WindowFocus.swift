@@ -88,10 +88,10 @@ public enum WindowFocus {
     private static func axWindow(_ axApp: AXUIElement, attribute: String) -> AXUIElement? {
         var ref: CFTypeRef?
         guard AXUIElementCopyAttributeValue(axApp, attribute as CFString, &ref) == .success,
-              let element = ref as CFTypeRef?,
+              let element = ref,
               CFGetTypeID(element) == AXUIElementGetTypeID() else { return nil }
-        // swiftlint:disable:next force_cast
-        return (element as! AXUIElement)
+        // CFTypeID already verified above; cast is safe for CoreFoundation types.
+        return unsafeBitCast(element, to: AXUIElement.self)
     }
 
     // MARK: - ウィンドウフォーカス
