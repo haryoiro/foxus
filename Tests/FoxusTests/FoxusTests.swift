@@ -656,3 +656,191 @@ struct RestoreKeysTests {
         #expect(context.strategy == .vscode(cwd: "/tmp"))
     }
 }
+
+// MARK: - LEB128 デコードテスト
+
+@Suite("VSCodeIPCClient LEB128 Tests")
+struct LEB128Tests {
+
+    @Test("1バイト値のデコード")
+    func singleByte() {
+        let data = Data([0x05])  // 5
+        var pos = data.startIndex
+        #expect(VSCodeIPCClient.decodeLEB128(data, pos: &pos) == 5)
+    }
+
+    @Test("2バイト値のデコード")
+    func twoByte() {
+        let data = Data([0x80, 0x01])  // 128
+        var pos = data.startIndex
+        #expect(VSCodeIPCClient.decodeLEB128(data, pos: &pos) == 128)
+    }
+
+    @Test("大きい値のデコード")
+    func largValue() {
+        let data = Data([0xFF, 0xFF, 0x03])  // 65535
+        var pos = data.startIndex
+        #expect(VSCodeIPCClient.decodeLEB128(data, pos: &pos) == 65535)
+    }
+
+    @Test("空データは nil")
+    func emptyData() {
+        let data = Data()
+        var pos = data.startIndex
+        #expect(VSCodeIPCClient.decodeLEB128(data, pos: &pos) == nil)
+    }
+
+    @Test("終端バイトなし（全 0x80）は nil")
+    func noTerminator() {
+        // 10バイト全て continuation bit が立っている → shift 上限超過で nil
+        let data = Data(repeating: 0x80, count: 10)
+        var pos = data.startIndex
+        #expect(VSCodeIPCClient.decodeLEB128(data, pos: &pos) == nil)
+    }
+
+    @Test("shift オーバーフロー防止")
+    func shiftOverflow() {
+        // 64bit超の shift を要求するデータ → nil
+        var bytes = [UInt8](repeating: 0x80, count: 12)
+        bytes.append(0x01)  // 終端
+        let data = Data(bytes)
+        var pos = data.startIndex
+        #expect(VSCodeIPCClient.decodeLEB128(data, pos: &pos) == nil)
+    }
+}
+
+// MARK: - AppleScript エスケープテスト
+
+@Suite("GhosttyWindowDetector AppleScript Escape Tests")
+struct AppleScriptEscapeTests {
+
+    @Test("通常文字列はそのまま")
+    func normalString() {
+        #expect(GhosttyWindowDetector.escapeForAS("hello") == "hello")
+    }
+
+    @Test("バックスラッシュのエスケープ")
+    func backslash() {
+        #expect(GhosttyWindowDetector.escapeForAS("a\\b") == "a\\\\b")
+    }
+
+    @Test("ダブルクォートのエスケープ")
+    func doubleQuote() {
+        #expect(GhosttyWindowDetector.escapeForAS("say \"hi\"") == "say \\\"hi\\\"")
+    }
+
+    @Test("改行・タブのエスケープ")
+    func newlineAndTab() {
+        #expect(GhosttyWindowDetector.escapeForAS("a\nb\tc") == "a\\nb\\tc")
+    }
+
+    @Test("キャリッジリターンのエスケープ")
+    func carriageReturn() {
+        #expect(GhosttyWindowDetector.escapeForAS("a\rb") == "a\\rb")
+    }
+
+    @Test("制御文字は除去される")
+    func controlCharsStripped() {
+        let input = "hello\u{01}\u{02}\u{1F}world"
+        let result = GhosttyWindowDetector.escapeForAS(input)
+        #expect(result == "helloworld")
+    }
+
+    @Test("日本語パスのエスケープ")
+    func japanesePath() {
+        #expect(GhosttyWindowDetector.escapeForAS("/Users/太郎/プロジェクト") == "/Users/太郎/プロジェクト")
+    }
+
+    @Test("空文字列")
+    func emptyString() {
+        #expect(GhosttyWindowDetector.escapeForAS("") == "")
+    }
+
+    @Test("複合エスケープ")
+    func combined() {
+        let result = GhosttyWindowDetector.escapeForAS("path\\to \"my\nproject\"")
+        #expect(result == "path\\\\to \\\"my\\nproject\\\"")
+    }
+}
+
+// MARK: - Cursor 認識テスト
+
+@Suite("Cursor Recognition Tests")
+struct CursorTests {
+
+    @Test("callerApp=cursor で VSCode 戦略")
+    func cursorCallerApp() {
+        let strategy = FocusStrategyResolver.determine(callerApp: "cursor", cwd: "/tmp", env: [:])
+        #expect(strategy == .vscode(cwd: "/tmp"))
+    }
+
+    @Test("callerApp=Cursor（大文字）で VSCode 戦略")
+    func cursorUpperCase() {
+        let strategy = FocusStrategyResolver.determine(callerApp: "Cursor", cwd: "/tmp", env: [:])
+        #expect(strategy == .vscode(cwd: "/tmp"))
+    }
+
+    @Test("TERM_PROGRAM=cursor で VSCode 戦略")
+    func cursorTermProgram() {
+        let strategy = FocusStrategyResolver.determine(callerApp: nil, cwd: "/tmp", env: ["TERM_PROGRAM": "cursor"])
+        #expect(strategy == .vscode(cwd: "/tmp"))
+    }
+
+    @Test("Cursor が BundleIDRegistry に登録されている")
+    func cursorInRegistry() {
+        #expect(BundleIDRegistry.termProgramToBundleId["cursor"] != nil)
+    }
+
+    @Test("Cursor が vscodeBundleIds に含まれる")
+    func cursorInVSCodeBundleIds() {
+        #expect(BundleIDRegistry.vscodeBundleIds.contains("com.todesktop.230313mzl4w4u92"))
+    }
+}
+
+// MARK: - TerminalTitle パーステスト
+
+@Suite("TerminalTitle Parse Tests")
+struct TerminalTitleParseTests {
+
+    @Test("正常なタイトル応答をパース")
+    func normalTitle() {
+        let response = Array("\u{1b}[21;My Project~".utf8)
+        #expect(TerminalTitle.parseTitle(response) == "My Project")
+    }
+
+    @Test("日本語タイトル")
+    func japaneseTitle() {
+        let response = Array("\u{1b}[21;プロジェクト名~".utf8)
+        #expect(TerminalTitle.parseTitle(response) == "プロジェクト名")
+    }
+
+    @Test("空タイトルは nil")
+    func emptyTitle() {
+        let response = Array("\u{1b}[21;~".utf8)
+        #expect(TerminalTitle.parseTitle(response) == nil)
+    }
+
+    @Test("不正なフォーマットは nil")
+    func invalidFormat() {
+        let response = Array("garbage data".utf8)
+        #expect(TerminalTitle.parseTitle(response) == nil)
+    }
+
+    @Test("空配列は nil")
+    func emptyResponse() {
+        #expect(TerminalTitle.parseTitle([]) == nil)
+    }
+
+    @Test("セミコロンを含むタイトル")
+    func titleWithSemicolon() {
+        let response = Array("\u{1b}[21;dir:branch;extra~".utf8)
+        #expect(TerminalTitle.parseTitle(response) == "dir:branch;extra")
+    }
+
+    @Test("lazy マッチで最短一致（チルダを含むタイトル）")
+    func lazyMatch() {
+        // タイトルに ~ が含まれる場合、最初の ~ で終わるべき
+        let response = Array("\u{1b}[21;~/projects~".utf8)
+        #expect(TerminalTitle.parseTitle(response) == "~/projects")
+    }
+}
