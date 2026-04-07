@@ -107,7 +107,22 @@ public enum GhosttyWindowDetector {
 
     /// AppleScript 文字列リテラル用エスケープ
     private static func escapeForAS(_ s: String) -> String {
-        s.replacingOccurrences(of: "\\", with: "\\\\")
-         .replacingOccurrences(of: "\"", with: "\\\"")
+        var result = ""
+        for ch in s {
+            switch ch {
+            case "\\": result += "\\\\"
+            case "\"": result += "\\\""
+            case "\n": result += "\\n"
+            case "\r": result += "\\r"
+            case "\t": result += "\\t"
+            default:
+                if ch.asciiValue != nil && ch.asciiValue! < 0x20 {
+                    // Other control characters: skip them to avoid breaking AppleScript
+                    continue
+                }
+                result.append(ch)
+            }
+        }
+        return result
     }
 }
