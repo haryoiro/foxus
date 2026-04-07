@@ -28,29 +28,13 @@ public enum Foxus {
         strategy: FocusStrategy,
         env: [String: String] = ProcessInfo.processInfo.environment
     ) -> Bool {
+        if let detector = strategy.detector {
+            return detector.focusCurrentWindow(cwd: strategy.cwd, env: env)
+        }
         switch strategy {
-        case .cmux(let cwd):
-            return CmuxWindowDetector.focusCurrentWindow(cwd: cwd, env: env)
-        case .neovim(let cwd):
-            return NeovimWindowDetector.focusCurrentWindow(cwd: cwd, env: env)
-        case .tmux(let cwd):
-            return TmuxWindowDetector.focusCurrentWindow(cwd: cwd)
-        case .zellij(let cwd):
-            return ZellijWindowDetector.focusCurrentWindow(cwd: cwd)
-        case .wezterm(let cwd):
-            return WeztermWindowDetector.focusCurrentWindow(cwd: cwd)
-        case .kitty(let cwd):
-            return KittyWindowDetector.focusCurrentWindow(cwd: cwd)
-        case .ghostty(let cwd):
-            return GhosttyWindowDetector.focusCurrentWindow(cwd: cwd)
-        case .vscode(let cwd):
-            return VSCodeWindowDetector.focusCurrentWindow(cwd: cwd, env: env)
-        case .intellij(let cwd):
-            return IntelliJWindowDetector.focusCurrentWindow(cwd: cwd)
-        case .generic(let bundleId, let cwd):
-            return executeGeneric(bundleId: bundleId, cwd: cwd)
-        case .fallback:
-            return false
+        case .generic(let bundleId, let cwd): return executeGeneric(bundleId: bundleId, cwd: cwd)
+        case .fallback: return false
+        default: return false
         }
     }
 
