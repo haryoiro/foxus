@@ -14,6 +14,15 @@ public enum GhosttyWindowDetector {
 
     private static let bundleId = "com.mitchellh.ghostty"
 
+    // MARK: - タイトル取得
+
+    /// Ghostty のフォーカス中ウィンドウのタイトルを返す
+    public static func windowTitle() -> String? {
+        let apps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId)
+        guard let app = apps.first else { return nil }
+        return WindowFocus.windowTitle(for: app)
+    }
+
     // MARK: - フォーカス復元
 
     /// Ghosttyにフォーカスし、cwdに一致するタブを復元
