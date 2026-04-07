@@ -15,6 +15,8 @@ public enum FocusStrategy: Equatable, Codable {
     case wezterm(cwd: String?)
     /// kitty環境: アプリにフォーカス + ウィンドウ復元（kitten @ 経由）
     case kitty(cwd: String?)
+    /// Neovim :terminal 環境: 外側ターミナルにフォーカス + タブ復元
+    case neovim(cwd: String?)
     /// VSCode: 専用ウィンドウ検出
     case vscode(cwd: String?)
     /// IntelliJ/JetBrains: 専用ウィンドウ検出
@@ -41,6 +43,15 @@ extension FocusStrategy {
             keys.formUnion(["WEZTERM_PANE", "WEZTERM_UNIX_SOCKET"])
         case .kitty:
             keys.formUnion(["KITTY_WINDOW_ID"])
+        case .neovim:
+            keys.formUnion([
+                "NVIM",
+                "CMUX_WORKSPACE_ID", "CMUX_SURFACE_ID", "CMUX_SOCKET_PATH",
+                "TMUX", "TMUX_PANE",
+                "ZELLIJ", "ZELLIJ_PANE_ID",
+                "WEZTERM_PANE", "WEZTERM_UNIX_SOCKET",
+                "KITTY_WINDOW_ID",
+            ])
         case .vscode:
             keys.formUnion(["VSCODE_GIT_IPC_HANDLE"])
         case .intellij:

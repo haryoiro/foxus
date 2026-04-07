@@ -37,7 +37,12 @@ public enum FocusStrategyResolver {
             return .vscode(cwd: cwd)
         }
 
-        // 2. cmux（タブ復元が必要なため、tmuxより先に判定）
+        // 2. Neovim :terminal（NVIM 環境変数で検出、マルチプレクサより先に判定）
+        if env["NVIM"] != nil {
+            return .neovim(cwd: cwd)
+        }
+
+        // 3. cmux（タブ復元が必要なため、tmuxより先に判定）
         if env["CMUX_WORKSPACE_ID"] != nil {
             return .cmux(cwd: cwd)
         }

@@ -31,6 +31,8 @@ public enum Foxus {
         switch strategy {
         case .cmux(let cwd):
             return CmuxWindowDetector.focusCurrentWindow(cwd: cwd, env: env)
+        case .neovim(let cwd):
+            return NeovimWindowDetector.focusCurrentWindow(cwd: cwd, env: env)
         case .tmux(let cwd):
             return TmuxWindowDetector.focusCurrentWindow(cwd: cwd)
         case .zellij(let cwd):
