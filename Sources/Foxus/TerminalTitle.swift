@@ -18,8 +18,8 @@ public enum TerminalTitle {
     ) -> String? {
         if let title = readFromCmux(env: env) { return title }
         if let title = readFromVSCode(env: env, cwd: cwd) { return title }
+        if let title = readFromGhostty(env: env, cwd: cwd) { return title }
         if let title = readFromTTY() { return title }
-        if let title = readFromGhostty(env: env) { return title }
         return nil
     }
 
@@ -85,11 +85,11 @@ public enum TerminalTitle {
 
     // MARK: - Ghostty (AX API fallback)
 
-    private static func readFromGhostty(env: [String: String]) -> String? {
+    private static func readFromGhostty(env: [String: String], cwd: String?) -> String? {
         guard env["TERM_PROGRAM"] == "ghostty" || env["GHOSTTY_RESOURCES_DIR"] != nil else {
             return nil
         }
-        return GhosttyWindowDetector.windowTitle()
+        return GhosttyWindowDetector.windowTitle(cwd: cwd)
     }
 
     // MARK: - TTY Query
