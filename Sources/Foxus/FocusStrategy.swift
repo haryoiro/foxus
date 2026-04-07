@@ -30,6 +30,44 @@ public enum FocusStrategy: Equatable, Codable {
 }
 
 extension FocusStrategy {
+    /// この戦略に対応するDetector型。`.generic`/`.fallback` は nil。
+    public var detector: (any FocusDetector.Type)? {
+        switch self {
+        case .cmux:     return CmuxWindowDetector.self
+        case .neovim:   return NeovimWindowDetector.self
+        case .tmux:     return TmuxWindowDetector.self
+        case .zellij:   return ZellijWindowDetector.self
+        case .wezterm:  return WeztermWindowDetector.self
+        case .kitty:    return KittyWindowDetector.self
+        case .ghostty:  return GhosttyWindowDetector.self
+        case .vscode:   return VSCodeWindowDetector.self
+        case .intellij: return IntelliJWindowDetector.self
+        case .generic, .fallback: return nil
+        }
+    }
+
+    /// 戦略に紐づく cwd を取得する。
+    public var cwd: String? {
+        switch self {
+        case .cmux(let cwd),
+             .tmux(let cwd),
+             .zellij(let cwd),
+             .wezterm(let cwd),
+             .kitty(let cwd),
+             .ghostty(let cwd),
+             .neovim(let cwd),
+             .vscode(let cwd),
+             .intellij(let cwd):
+            return cwd
+        case .generic(_, let cwd):
+            return cwd
+        case .fallback:
+            return nil
+        }
+    }
+}
+
+extension FocusStrategy {
     /// この戦略の復元に必要な環境変数キー。
     /// Detector ごとに異なる。新しい Detector を追加したらここにも追加する。
     public var restoreKeys: Set<String> {
