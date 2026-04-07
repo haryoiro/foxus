@@ -12,6 +12,9 @@ import Foundation
 /// 4. Ghostty AX API: フォーカスウィンドウのタイトル（フォールバック）
 public enum TerminalTitle {
 
+    /// xterm "Report window title" escape sequence (CSI 21 t)
+    private static let reportTitleEscapeSequence = "\u{1b}[21t"
+
     public static func resolve(
         env: [String: String] = ProcessInfo.processInfo.environment,
         cwd: String? = nil
@@ -147,7 +150,7 @@ public enum TerminalTitle {
         tcsetattr(ttyFd, TCSANOW, &raw)
         defer { tcsetattr(ttyFd, TCSANOW, &saved) }
 
-        let query = "\u{1b}[21t"
+        let query = Self.reportTitleEscapeSequence
         guard Darwin.write(ttyFd, query, query.utf8.count) > 0 else { return nil }
 
         var response = [UInt8]()
@@ -169,7 +172,7 @@ public enum TerminalTitle {
 
     private static func parseTitle(_ bytes: [UInt8]) -> String? {
         guard let raw = String(bytes: bytes, encoding: .utf8) else { return nil }
-        let pattern = "\u{1b}\\[21;(.+)~"
+        let pattern = "\u{1b}\\[21;(.+?)~"
         guard let regex = try? NSRegularExpression(pattern: pattern),
               let match = regex.firstMatch(in: raw, range: NSRange(raw.startIndex..., in: raw)),
               let range = Range(match.range(at: 1), in: raw) else { return nil }
