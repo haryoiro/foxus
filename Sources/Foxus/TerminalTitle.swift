@@ -26,6 +26,58 @@ public enum TerminalTitle {
         return nil
     }
 
+    // MARK: - タイトル書き込み
+
+    /// ターミナルのタイトルを設定する。
+    ///
+    /// 書き込み戦略（優先順）:
+    /// 1. cmux環境: ソケットAPI経由で surface title を設定
+    /// 2. TTY: OSC エスケープシーケンスでターミナルに直接書き込み
+    ///
+    /// - Parameters:
+    ///   - title: 設定するタイトル
+    ///   - env: 環境変数（デフォルト: 現在のプロセス環境）
+    /// - Returns: 書き込みに成功した場合は true
+    @discardableResult
+    public static func write(
+        title: String,
+        env: [String: String] = ProcessInfo.processInfo.environment
+    ) -> Bool {
+        if writeToCmux(title: title, env: env) { return true }
+        if writeToTTY(title: title) { return true }
+        return false
+    }
+
+    private static func writeToCmux(title: String, env: [String: String]) -> Bool {
+        guard let surfaceId = env["CMUX_SURFACE_ID"],
+              let socketPath = env["CMUX_SOCKET_PATH"] else { return false }
+
+        let payload: [String: Any] = [
+            "id": "foxus-set-title",
+            "method": "surface.set_title",
+            "params": ["surface_id": surfaceId, "title": title]
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: payload),
+              let msg = String(data: data, encoding: .utf8),
+              let resp = sendAndReceive(socketPath: socketPath, message: msg + "\n"),
+              let r = try? JSONSerialization.jsonObject(with: resp) as? [String: Any],
+              r["error"] == nil else { return false }
+        return true
+    }
+
+    /// OSC 2 (Set Window Title) エスケープシーケンスで TTY にタイトルを書き込む
+    private static func writeToTTY(title: String) -> Bool {
+        guard let ttyPath = findParentTTY() else { return false }
+        let fd = open(ttyPath, O_WRONLY | O_NOCTTY)
+        guard fd >= 0 else { return false }
+        defer { close(fd) }
+
+        // OSC 2 ; title ST — ウィンドウタイトル設定
+        let seq = "\u{1b}]2;\(title)\u{07}"
+        let written = seq.withCString { Darwin.write(fd, $0, strlen($0)) }
+        return written > 0
+    }
+
     // MARK: - cmux
 
     private static func readFromCmux(env: [String: String]) -> String? {
